@@ -32,9 +32,9 @@ jobs:
     # 4. Build the Docker image
     - name: Build Docker image
       run: |
-        docker build -t $ECR_REPOSITORY_URI:latest .
+        docker build -t $ECR_REPOSITORY_URI:${{ github.sha }} .
 
     # 5. Push the Docker image to Amazon ECR
     - name: Push Docker image to ECR
       run: |
-        docker push $ECR_REPOSITORY_URI:latest
+        docker push $ECR_REPOSITORY_URI:${{ github.sha }}
