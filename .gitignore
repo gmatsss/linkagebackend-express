@@ -1,0 +1,11 @@
+# Ignore node_modules
+node_modules/
+
+# Ignore environment variables
+.env
+
+# Ignore logs
+*.log
+
+# Ignore Docker files if you have any sensitive configuration
+docker-compose.yml
