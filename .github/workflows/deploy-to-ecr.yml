@@ -4,19 +4,17 @@ on:
       - main  # Trigger workflow on push to the main branch
 
 env:
-  AWS_REGION: us-east-1  # Replace with your actual AWS region if different
-  ECR_REPOSITORY_URI: 541261779827.dkr.ecr.us-east-1.amazonaws.com/linkagebackend  # Your ECR URI
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY_URI: 541261779827.dkr.ecr.us-east-1.amazonaws.com/linkagebackend
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Checkout the code from GitHub
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # 2. Configure AWS credentials
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v3
       with:
@@ -24,17 +22,37 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    # 3. Log in to Amazon ECR
     - name: Log in to Amazon ECR
       run: |
         aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY_URI
 
-    # 4. Build the Docker image
     - name: Build Docker image
       run: |
         docker build -t $ECR_REPOSITORY_URI:${{ github.sha }} .
 
-    # 5. Push the Docker image to Amazon ECR
     - name: Push Docker image to ECR
       run: |
         docker push $ECR_REPOSITORY_URI:${{ github.sha }}
+
+    - name: Register new task definition revision in ECS
+      run: |
+        aws ecs register-task-definition \
+          --family LinkageTaskDefinition \
+          --container-definitions '[
+            {
+              "name": "express-backend",
+              "image": "'$ECR_REPOSITORY_URI:${{ github.sha }}'",
+              "essential": true,
+              "memory": 512,
+              "cpu": 256,
+              "portMappings": [{"containerPort": 3000, "hostPort": 3000}]
+            }
+          ]' \
+          --network-mode awsvpc
+
+    - name: Update ECS service to use latest task definition revision
+      run: |
+        aws ecs update-service \
+          --cluster LinkageCluster \
+          --service express-backend-service \
+          --force-new-deployment
