@@ -38,5 +38,5 @@ jobs:
       run: |
         aws ecs update-service \
           --cluster LinkageCluster \
-          --service express-backend-service \
+          --service express-backend-service-v2 \
           --force-new-deployment
