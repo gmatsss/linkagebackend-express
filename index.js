@@ -14,6 +14,10 @@ app.get("/", (req, res) => {
   res.send("Hello from Node.js Express!");
 });
 
+app.get("/health", (req, res) => {
+  res.status(200).send("Healthy");
+});
+
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT} please check`);
+  console.log(`The Server is running on port ${PORT}`);
 });
