@@ -18,6 +18,6 @@ app.get("/health", (req, res) => {
   res.status(200).send("Healthy"); //health
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`The Server is running on port ${PORT}`);
 });
