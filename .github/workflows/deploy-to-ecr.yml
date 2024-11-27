@@ -1,7 +1,7 @@
 on:
   push:
     branches:
-      - main  # Trigger workflow on push to the main branch
+      - main
 
 env:
   AWS_REGION: us-east-1
@@ -34,40 +34,53 @@ jobs:
       run: |
         docker push $ECR_REPOSITORY_URI:latest
 
-    - name: Register ECS Task Definition
+    - name: Register new ECS task definition
       run: |
-        aws ecs register-task-definition \
-          --family LinkageTaskDefinition \
-          --execution-role-arn arn:aws:iam::541261779827:role/ecsTaskExecutionRole \
-          --container-definitions '[
+        echo '{
+          "family": "LinkageTaskDefinition",
+          "containerDefinitions": [
             {
               "name": "express-backend",
-              "image": "'${ECR_REPOSITORY_URI}':latest",
+              "image": "${{ env.ECR_REPOSITORY_URI }}:latest",
               "memory": 512,
               "cpu": 256,
-              "environment": [
-                {
-                  "name": "CONSUMER_KEY",
-                  "value": "'${{ secrets.CONSUMERKEY }}'"
-                },
-                {
-                  "name": "CONSUMER_SECRET",
-                  "value": "'${{ secrets.CONSUMERSECRET }}'"
-                }
-              ],
+              "essential": true,
               "portMappings": [
                 {
                   "containerPort": 3000,
                   "hostPort": 3000,
                   "protocol": "tcp"
                 }
-              ]
+              ],
+              "environment": [
+                {
+                  "name": "CONSUMER_KEY",
+                  "value": "${{ secrets.CONSUMERKEY }}"
+                },
+                {
+                  "name": "CONSUMER_SECRET",
+                  "value": "${{ secrets.CONSUMERSECRET }}"
+                }
+              ],
+              "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                  "awslogs-group": "/ecs/LinkageTaskDefinition",
+                  "awslogs-region": "${{ env.AWS_REGION }}",
+                  "awslogs-stream-prefix": "ecs"
+                }
+              }
             }
-          ]'
+          ],
+          "networkMode": "awsvpc",
+          "requiresCompatibilities": ["FARGATE"],
+          "cpu": "256",
+          "memory": "512"
+        }' > task-definition.json
 
-    - name: Update ECS Service
+        aws ecs register-task-definition --cli-input-json file://task-definition.json
+
+    - name: Update ECS service to use the latest task definition
       run: |
-        aws ecs update-service \
-          --cluster LinkageCluster \
-          --service express-backend-service-v2 \
-          --force-new-deployment
+        TASK_DEFINITION_ARN=$(aws ecs describe-task-definition --task-definition LinkageTaskDefinition --query 'taskDefinition.taskDefinitionArn' --output text)
+        aws ecs update-service --cluster LinkageCluster --service express-backend-service-v2 --task-definition $TASK_DEFINITION_ARN --force-new-deployment
