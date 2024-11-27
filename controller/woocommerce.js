@@ -12,8 +12,8 @@ const createProductController = async (req, res) => {
   } = req.body;
 
   const url = "https://gillstradingpost.com/wp-json/wc/v3/products";
-  const consumerKey = "ck_e7dcf2732c437e6ab925837bc66cfb87620034e7";
-  const consumerSecret = "cs_a8c3698af2120df44220e6cf83f365877d735f36";
+  const consumerKey = process.env.CONSUMER_KEY;
+  const consumerSecret = process.env.CONSUMER_SECRET;
 
   try {
     const response = await axios.post(
