@@ -38,6 +38,7 @@ jobs:
       run: |
         echo '{
           "family": "LinkageTaskDefinition",
+          "executionRoleArn": "arn:aws:iam::541261779827:role/ecsTaskExecutionRole",
           "containerDefinitions": [
             {
               "name": "express-backend",
