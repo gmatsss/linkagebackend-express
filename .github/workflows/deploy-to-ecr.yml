@@ -6,6 +6,7 @@ on:
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY_URI: 541261779827.dkr.ecr.us-east-1.amazonaws.com/linkagebackend
+  NEW_SECURITY_GROUP_ID: sg-05bc3dff8e3341287  # New security group ID
 
 jobs:
   build-and-deploy:
@@ -34,8 +35,25 @@ jobs:
       run: |
         docker push $ECR_REPOSITORY_URI:latest
 
-    - name: Update ECS service to use the latest image
+    - name: Register new ECS task definition revision
+      id: register-task
       run: |
+        # Fetch the current task definition
+        CURRENT_TASK=$(aws ecs describe-task-definition --task-definition express-backend-task)
+        
+        # Update the networkConfiguration with the new security group
+        UPDATED_TASK=$(echo "$CURRENT_TASK" | jq \
+          '.taskDefinition | 
+          del(.taskDefinitionArn, .revision, .status, .registeredAt, .registeredBy) | 
+          .networkConfiguration.awsvpcConfiguration.securityGroups = ["${{ env.NEW_SECURITY_GROUP_ID }}"]')
+
+        # Register the updated task definition
+        echo "$UPDATED_TASK" > updated-task-def.json
+        aws ecs register-task-definition --cli-input-json file://updated-task-def.json
+
+    - name: Update ECS service to use the new task definition
+      run: |
+        # Force the ECS service to use the new task definition
         aws ecs update-service \
           --cluster LinkageCluster \
           --service express-backend-service-v2 \
