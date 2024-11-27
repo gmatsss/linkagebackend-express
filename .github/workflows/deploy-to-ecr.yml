@@ -36,38 +36,27 @@ jobs:
       run: |
         docker push $ECR_REPOSITORY_URI:latest
 
-    - name: Deregister Existing Task Definitions
+    - name: Update ECS Task Definition Security Group
+      id: update-task
       run: |
-        # List all revisions of the task definition
-        REVISIONS=$(aws ecs list-task-definitions \
-          --family-prefix ${{ env.TASK_DEFINITION_NAME }} \
-          --region $AWS_REGION \
-          --query "taskDefinitionArns[]" --output text)
+        # Fetch the current Revision 1 of the task definition
+        CURRENT_TASK=$(aws ecs describe-task-definition \
+          --task-definition ${{ env.TASK_DEFINITION_NAME }}:1)
 
-        # Deregister each revision
-        for REVISION in $REVISIONS; do
-          aws ecs deregister-task-definition --task-definition $REVISION
-        done
-
-    - name: Register Task Definition Revision 1
-      run: |
-        # Fetch the current task definition
-        CURRENT_TASK=$(aws ecs describe-task-definition --task-definition ${{ env.TASK_DEFINITION_NAME }}:1)
-
-        # Update the security group
+        # Modify the security group
         UPDATED_TASK=$(echo "$CURRENT_TASK" | jq '
           .taskDefinition |
           del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) |
           .networkConfiguration.awsvpcConfiguration.securityGroups = ["'${{ env.NEW_SECURITY_GROUP_ID }}"]
         ')
 
-        # Save and register the task definition
+        # Save the updated task definition and re-register it
         echo "$UPDATED_TASK" > updated-task-def.json
         aws ecs register-task-definition --cli-input-json file://updated-task-def.json
 
     - name: Update ECS Service to Use Task Definition Revision 1
       run: |
-        # Use the specific task definition revision 1
+        # Always point the ECS service to use Revision 1
         aws ecs update-service \
           --cluster LinkageCluster \
           --service express-backend-service-v2 \
