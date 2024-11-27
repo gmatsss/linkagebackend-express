@@ -44,10 +44,10 @@ jobs:
           --task-definition ${{ env.TASK_DEFINITION_NAME }}:1)
 
         # Modify the security group
-        UPDATED_TASK=$(echo "$CURRENT_TASK" | jq '
+        UPDATED_TASK=$(echo "$CURRENT_TASK" | jq --arg sg_id "${{ env.NEW_SECURITY_GROUP_ID }}" '
           .taskDefinition |
           del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) |
-          .networkConfiguration.awsvpcConfiguration.securityGroups = ["'${{ env.NEW_SECURITY_GROUP_ID }}"]
+          .networkConfiguration.awsvpcConfiguration.securityGroups = [$sg_id]
         ')
 
         # Save the updated task definition and re-register it
