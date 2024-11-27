@@ -6,6 +6,7 @@ on:
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY_URI: 541261779827.dkr.ecr.us-east-1.amazonaws.com/linkagebackend
+  TASK_DEFINITION_NAME: LinkageTaskDefinition  # Name of your task definition
   NEW_SECURITY_GROUP_ID: sg-05bc3dff8e3341287  # New security group ID
 
 jobs:
@@ -35,34 +36,40 @@ jobs:
       run: |
         docker push $ECR_REPOSITORY_URI:latest
 
-    - name: Update ECS Task Definition Security Group
-      id: update-task
+    - name: Deregister Existing Task Definitions
+      run: |
+        # List all revisions of the task definition
+        REVISIONS=$(aws ecs list-task-definitions \
+          --family-prefix ${{ env.TASK_DEFINITION_NAME }} \
+          --region $AWS_REGION \
+          --query "taskDefinitionArns[]" --output text)
+
+        # Deregister each revision
+        for REVISION in $REVISIONS; do
+          aws ecs deregister-task-definition --task-definition $REVISION
+        done
+
+    - name: Register Task Definition Revision 1
       run: |
         # Fetch the current task definition
-        CURRENT_TASK=$(aws ecs describe-task-definition --task-definition express-backend-task)
+        CURRENT_TASK=$(aws ecs describe-task-definition --task-definition ${{ env.TASK_DEFINITION_NAME }}:1)
 
-        # Update the network configuration with the new security group
+        # Update the security group
         UPDATED_TASK=$(echo "$CURRENT_TASK" | jq '
           .taskDefinition |
           del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) |
           .networkConfiguration.awsvpcConfiguration.securityGroups = ["'${{ env.NEW_SECURITY_GROUP_ID }}"]
         ')
 
-        # Save the updated task definition and register it
+        # Save and register the task definition
         echo "$UPDATED_TASK" > updated-task-def.json
         aws ecs register-task-definition --cli-input-json file://updated-task-def.json
 
-    - name: Update ECS Service to Use New Task Definition
+    - name: Update ECS Service to Use Task Definition Revision 1
       run: |
-        # Get the latest task definition revision
-        TASK_DEF_ARN=$(aws ecs describe-services \
-          --cluster LinkageCluster \
-          --services express-backend-service-v2 \
-          --query "services[0].taskDefinition" --output text)
-
-        # Force the ECS service to use the new task definition
+        # Use the specific task definition revision 1
         aws ecs update-service \
           --cluster LinkageCluster \
           --service express-backend-service-v2 \
-          --task-definition $TASK_DEF_ARN \
+          --task-definition ${{ env.TASK_DEFINITION_NAME }}:1 \
           --force-new-deployment
