@@ -40,3 +40,13 @@ jobs:
           --cluster LinkageCluster \
           --service express-backend-service-v2 \
           --force-new-deployment
+
+    - name: Export environment variables
+      run: |
+        echo "CONSUMER_KEY=${{ secrets.CONSUMERKEY }}" >> $GITHUB_ENV
+        echo "CONSUMER_SECRET=${{ secrets.CONSUMERSECRET }}" >> $GITHUB_ENV
+
+    - name: Verify secrets are loaded
+      run: |
+        echo "Consumer Key: $CONSUMER_KEY"
+        echo "Consumer Secret: $CONSUMER_SECRET"
