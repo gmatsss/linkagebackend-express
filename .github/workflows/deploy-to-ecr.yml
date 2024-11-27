@@ -34,19 +34,40 @@ jobs:
       run: |
         docker push $ECR_REPOSITORY_URI:latest
 
-    - name: Update ECS service to use the latest image
+    - name: Register ECS Task Definition
+      run: |
+        aws ecs register-task-definition \
+          --family LinkageTaskDefinition \
+          --execution-role-arn arn:aws:iam::541261779827:role/ecsTaskExecutionRole \
+          --container-definitions '[
+            {
+              "name": "express-backend",
+              "image": "'${ECR_REPOSITORY_URI}':latest",
+              "memory": 512,
+              "cpu": 256,
+              "environment": [
+                {
+                  "name": "CONSUMER_KEY",
+                  "value": "'${{ secrets.CONSUMERKEY }}'"
+                },
+                {
+                  "name": "CONSUMER_SECRET",
+                  "value": "'${{ secrets.CONSUMERSECRET }}'"
+                }
+              ],
+              "portMappings": [
+                {
+                  "containerPort": 3000,
+                  "hostPort": 3000,
+                  "protocol": "tcp"
+                }
+              ]
+            }
+          ]'
+
+    - name: Update ECS Service
       run: |
         aws ecs update-service \
           --cluster LinkageCluster \
           --service express-backend-service-v2 \
           --force-new-deployment
-
-    - name: Export environment variables
-      run: |
-        echo "CONSUMER_KEY=${{ secrets.CONSUMERKEY }}" >> $GITHUB_ENV
-        echo "CONSUMER_SECRET=${{ secrets.CONSUMERSECRET }}" >> $GITHUB_ENV
-
-    - name: Verify secrets are loaded
-      run: |
-        echo "Consumer Key: $CONSUMER_KEY"
-        echo "Consumer Secret: $CONSUMER_SECRET"
