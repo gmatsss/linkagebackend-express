@@ -6,9 +6,11 @@ const PORT = process.env.PORT || 3000;
 
 const helloRoute = require("./routes/helloRoute");
 const woocomerce = require("./routes/woocomerce");
+const discordnotifRoute = require("./routes/discordnotif");
 
 app.use(bodyParser.json());
 
+app.use("/discordnotif", discordnotifRoute);
 app.use("/test", helloRoute);
 app.use("/woo", woocomerce);
 
@@ -25,5 +27,5 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`The Server is running on the port ${PORT}`);
+  console.log(`The Server is running on http://localhost:${PORT}`);
 });
