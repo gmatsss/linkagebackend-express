@@ -71,53 +71,35 @@ exports.handleEstimateDeclined = (req, res) => {
 };
 
 exports.handleInvoicePaidNotif = (req, res) => {
-  const { contactFullName, amount } = req.body;
+  const INVOICE_PAID_TYPE = "InvoicePaid";
+  const { payment } = req.body;
+  const customerFullName =
+    payment?.customer?.name || req.body.full_name || "Unknown Customer";
 
   console.log("Invoice Paid Notification:");
-  console.log(`Contact Full Name: ${contactFullName}`);
-  console.log(`Invoice Amount: ${amount}`);
+  console.log(`Customer Full Name: ${customerFullName}`);
 
-  res
-    .status(200)
-    .send({ success: true, message: "Invoice payment notification received" });
-};
+  const invoiceUrl = payment?.invoice?.url || "No URL provided";
+  const amountPaid = payment?.total_amount || "Unknown Amount";
 
-exports.handleService = async (req, res) => {
-  const zapierWebhookUrl =
-    "https://hooks.zapier.com/hooks/catch/775472/2sxfc6f/";
+  const message = `Payment Confirmation:\n${customerFullName} has successfully paid the invoice ${invoiceUrl} for $${amountPaid}.\n\nNext Steps:\n1. Log the paid invoice in WHMCS under the correct customer account.\n2. Begin the project officially.\n3. Send all required onboarding documentation to the customer to ensure a smooth start.`;
 
-  // Extract customData and other required fields
-  const { customData, workflow } = req.body;
+  console.log(message);
 
-  const doctype = "serviceContract";
-
-  // Access fields from customData
-  const ServiceName = customData?.ServiceName || "No Service Name Provided";
-  const Fname = customData?.Fname || "No First Name";
-  const Lname = customData?.Lname || "No Last Name";
-  const Link = customData?.Link;
-
-  const full_name = `${Fname} ${Lname}`;
-
-  // Construct the payload for Zapier
-  const payload = {
-    message: `${full_name} has signed our ${ServiceName} service agreement.  Please review the document here: ${Link} `,
-    doctype: doctype,
-  };
-
-  try {
-    // Send message to Zapier webhook
-    await axios.post(zapierWebhookUrl, payload);
-
-    console.log("Zapier Notification Sent:", payload);
-    res
-      .status(200)
-      .send({ success: true, message: "Notification sent to Zapier" });
-  } catch (error) {
-    console.error("Error sending Zapier notification:", error);
-    res.status(500).send({
-      success: false,
-      message: "Failed to send notification to Zapier",
+  axios
+    .post("https://hooks.zapier.com/hooks/catch/775472/28ov68b/", {
+      message,
+      type: INVOICE_PAID_TYPE,
+    })
+    .then(() => {
+      console.log("Message successfully sent to webhook");
+    })
+    .catch((error) => {
+      console.error("Error sending message to webhook:", error);
     });
-  }
+
+  res.status(200).send({
+    success: true,
+    message: "Invoice payment notification received",
+  });
 };

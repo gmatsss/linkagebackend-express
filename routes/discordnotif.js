@@ -8,6 +8,6 @@ const {
 
 router.post("/accepted", handleEstimateAccepted);
 router.post("/declined", handleEstimateDeclined);
-router.post("/invoice", handleInvoicePaidNotif);
+router.post("/invpayment", handleInvoicePaidNotif);
 
 module.exports = router;
