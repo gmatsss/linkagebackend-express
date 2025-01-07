@@ -50,7 +50,13 @@ const MCappointment = async (req, res) => {
     }
     res.status(500).json({
       message: "Failed to create appointment",
-      error: error.response ? error.response.data : error.message,
+      error: error.response
+        ? {
+            status: error.response.status,
+            data: error.response.data,
+            headers: error.response.headers,
+          }
+        : error.message,
     });
   }
 };
