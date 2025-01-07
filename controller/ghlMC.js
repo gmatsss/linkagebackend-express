@@ -11,7 +11,7 @@ const MCappointment = async (req, res) => {
 
   try {
     const slotInAWST = DateTime.fromISO(selectedSlot, {
-      zone: "Australia/Perth",
+      zone: "America/New_York",
     });
 
     const convertedSlot = slotInAWST.toFormat("yyyy-MM-dd'T'HH:mm:ssZZ");
@@ -27,6 +27,8 @@ const MCappointment = async (req, res) => {
       calendarNotes,
     };
 
+    console.log("Request Data:", requestData);
+
     const response = await axios.post(url, requestData, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -34,11 +36,18 @@ const MCappointment = async (req, res) => {
       },
     });
 
+    console.log("API Response:", response);
+    console.log("Response Data:", response.data);
+
     res.status(200).json({
       message: "Appointment created successfully",
       data: response.data,
     });
   } catch (error) {
+    console.error("Error creating appointment:", error.message);
+    if (error.response) {
+      console.error("Error Response Data:", error.response.data);
+    }
     res.status(500).json({
       message: "Failed to create appointment",
       error: error.response ? error.response.data : error.message,
