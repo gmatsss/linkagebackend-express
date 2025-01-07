@@ -10,12 +10,8 @@ exports.handleEstimateAccepted = (req, res) => {
   console.log(`Customer Full Name: ${customerFullName}`);
 
   const customerFirstName = customerFullName.split(" ")[0];
-
   const estimateUrl = customData?.URL || "No URL provided";
-
   const message = `${estimateUrl}\nA new estimate has been accepted from ${customerFullName}. An invoice has been sent to ${customerFirstName} GHL and awaiting payment.`;
-
-  console.log(message);
 
   axios
     .post("https://hooks.zapier.com/hooks/catch/775472/28ov68b/", {
@@ -49,8 +45,6 @@ exports.handleEstimateDeclined = (req, res) => {
   const estimateUrl = customData?.URL || "No URL provided";
 
   const message = `${estimateUrl}\nThe estimate from ${customerFullName} has been declined. No further action is needed at this time. Please follow up with ${customerFirstName} if needed for additional clarification or revisions.`;
-
-  console.log(message);
 
   axios
     .post("https://hooks.zapier.com/hooks/catch/775472/28ov68b/", {

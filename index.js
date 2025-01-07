@@ -7,12 +7,16 @@ const PORT = process.env.PORT || 3000;
 const helloRoute = require("./routes/helloRoute");
 const woocomerce = require("./routes/woocomerce");
 const discordnotifRoute = require("./routes/discordnotif");
+const pancakeRoute = require("./routes/pancake");
+const ghlMCRoute = require("./routes/ghlMC");
 
 app.use(bodyParser.json());
 
 app.use("/discordnotif", discordnotifRoute);
 app.use("/test", helloRoute);
 app.use("/woo", woocomerce);
+app.use("/pancake", pancakeRoute);
+app.use("/ghlMCRoute", ghlMCRoute);
 
 app.get("/", (req, res) => {
   res.send("Hello from Node.js Express!");
