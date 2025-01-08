@@ -1,5 +1,6 @@
 const axios = require("axios");
 const { DateTime } = require("luxon");
+const qs = require("qs");
 
 const MCappointment = async (req, res) => {
   const token =
@@ -41,15 +42,27 @@ const MCappointment = async (req, res) => {
 
     res.status(200).json({
       message: "Appointment created successfully",
+      hasBooked: true,
       data: response.data,
     });
   } catch (error) {
     console.error("Error creating appointment:", error.message);
+    let hasBooked = false;
+
     if (error.response) {
       console.error("Error Response Data:", error.response.data);
+      if (error.response.status === 422 && error.response.data.selectedSlot) {
+        res.status(200).json({
+          message: error.response.data.selectedSlot.message,
+          hasBooked: false,
+        });
+        return;
+      }
     }
+
     res.status(500).json({
       message: "Failed to create appointment",
+      hasBooked,
       error: error.response
         ? {
             status: error.response.status,
@@ -61,6 +74,116 @@ const MCappointment = async (req, res) => {
   }
 };
 
+const calculateDuration = (start, end) => {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  return (endDate - startDate) / (1000 * 60);
+};
+
+const reSchedMCappointment = async (req, res) => {
+  try {
+    const { calendar, customData } = req.body;
+
+    if (
+      !calendar ||
+      !calendar.startTime ||
+      !calendar.endTime ||
+      !calendar.selectedTimezone ||
+      !customData ||
+      !customData.name ||
+      !customData.email
+    ) {
+      return res.status(400).json({
+        message: "Missing necessary calendar or contact data",
+      });
+    }
+
+    const startTime = calendar.startTime;
+    const endTime = calendar.endTime;
+    const timeZone = calendar.selectedTimezone;
+    const participantName = customData.name;
+    const participantEmail = customData.email;
+
+    const getToken = async () => {
+      const ZOOM_CLIENT_ID = process.env.ZOOM_CLIENT_ID;
+      const ZOOM_CLIENT_SECRET = process.env.ZOOM_CLIENT_SECRET;
+      const ZOOM_ACCOUNT_ID = process.env.ZOOM_ACCOUNT_ID;
+
+      const credentials = `${ZOOM_CLIENT_ID}:${ZOOM_CLIENT_SECRET}`;
+      const encodedCredentials = Buffer.from(credentials).toString("base64");
+
+      let config = {
+        method: "post",
+        maxBodyLength: Infinity,
+        url: `https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${ZOOM_ACCOUNT_ID}`,
+        headers: {
+          Authorization: `Basic ${encodedCredentials}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+          Host: "zoom.us",
+        },
+      };
+
+      const response = await axios.request(config);
+      return response.data.access_token;
+    };
+
+    const token = await getToken();
+
+    const zoomMeetingData = {
+      topic: `Meeting with ${participantName}`,
+      type: 2,
+      start_time: startTime,
+      duration: calculateDuration(startTime, endTime),
+      timezone: timeZone,
+      agenda: `Meeting with ${participantName}`,
+      settings: {
+        host_video: true,
+        participant_video: true,
+        approval_type: 0,
+        registration_type: 1,
+        audio: "both",
+        join_before_host: true,
+        enforce_login: false,
+        registrants_email_notification: true,
+      },
+      registrants: [
+        {
+          email: participantEmail,
+          first_name: participantName.split(" ")[0],
+          last_name: participantName.split(" ")[1] || "",
+        },
+      ],
+    };
+
+    const response = await axios.post(
+      `https://api.zoom.us/v2/users/me/meetings`,
+      zoomMeetingData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const { join_url } = response.data;
+
+    res.status(200).json({
+      joinMeetingURL: join_url,
+      participant: {
+        name: participantName,
+        email: participantEmail,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to create Zoom meeting",
+      error: error.response ? error.response.data : error.message,
+    });
+  }
+};
+
 module.exports = {
   MCappointment,
+  reSchedMCappointment,
 };
