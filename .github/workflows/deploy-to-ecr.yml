@@ -61,18 +61,20 @@ jobs:
                 {
                   "name": "CONSUMER_SECRET",
                   "value": "${{ secrets.CONSUMERSECRET }}"
+                },
+                {
+                  "name": "ZOOM_CLIENT_ID",
+                  "value": "${{ secrets.ZOOM_CLIENT_ID }}"
+                },
+                {
+                  "name": "ZOOM_CLIENT_SECRET",
+                  "value": "${{ secrets.ZOOM_CLIENT_SECRET }}"
+                },
+                {
+                  "name": "ZOOM_ACCOUNT_ID",
+                  "value": "${{ secrets.ZOOM_ACCOUNT_ID }}"
                 }
               ],
-              "logConfiguration": {
-                "logDriver": "awslogs",
-                "options": {
-                  "awslogs-group": "/ecs/LinkageTaskDefinition",
-                  "awslogs-region": "${{ env.AWS_REGION }}",
-                  "awslogs-stream-prefix": "ecs"
-                }
-              }
-            }
-          ],
           "networkMode": "awsvpc",
           "requiresCompatibilities": ["FARGATE"],
           "cpu": "256",
