@@ -229,9 +229,13 @@ const Mcformsubmission = async (req, res) => {
         v9NC8ZRjPBXOgrCeWuhC,
         a4gzdet9xvTkXoKDh989,
         JkJF9O1YKe8r2p3BGfmz,
-        "0KoLtHsWdCvMpJqZlUsl": newField_1, // Newly added
-        qCFjBrTccs05CFOag6Vt: newField_2, // Newly added
-        nzdiDlCVE7sXUkyePmOF: newField_3, // Newly added
+        "0KoLtHsWdCvMpJqZlUsl": newField_1,
+        qCFjBrTccs05CFOag6Vt: newField_2,
+        nzdiDlCVE7sXUkyePmOF: newField_3,
+        GfetwqDy5wQS2WvSdM30: newField_4,
+        "6wWSo6j66T3IPwnbSTz0": newField_5,
+        oQq0RZOr0RQyFhZFACT1: newField_6,
+        "9vGxxGQCEk43mz3jMoXj": newField_7,
         "84tGrhrAfnZFnyelbFNN": answer_8,
         yB3nAnX0V2Wn2tEm5kd1,
         "9UDCoybzi2y2xgSnmr7T": answer_10,
@@ -330,9 +334,13 @@ const Mcformsubmission = async (req, res) => {
         answer_49: dcQTWd3KMGiEHwmLSilw,
         answer_50: qhLNSpj2JzD2nV3PxroV,
         answer_51: i9rXxmHVUVA3pqNypmAr,
-        answer_52: newField_1, // Newly added
-        answer_53: newField_2, // Newly added
-        answer_54: newField_3, // Newly added
+        answer_52: newField_1,
+        answer_53: newField_2,
+        answer_54: newField_3,
+        answer_55: GfetwqDy5wQS2WvSdM30,
+        answer_56: "6wWSo6j66T3IPwnbSTz0",
+        answer_57: oQq0RZOr0RQyFhZFACT1,
+        answer_58: "9vGxxGQCEk43mz3jMoXj",
         sales_goals,
         ad_placements,
         marketing_strategies,
