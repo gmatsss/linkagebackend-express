@@ -187,7 +187,7 @@ const Mcformsubmission = async (req, res) => {
   try {
     const { name, email, phone, formid } = req.body;
 
-    console.log(req.body);
+    //   console.log(req.body);
 
     const config = {
       method: "get",
