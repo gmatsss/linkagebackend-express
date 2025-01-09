@@ -203,6 +203,9 @@ const Mcformsubmission = async (req, res) => {
 
     if (response.data && response.data.submissions.length > 0) {
       const latestSubmission = response.data.submissions[0];
+
+      console.log(latestSubmission);
+
       const {
         name,
         email,
@@ -212,6 +215,10 @@ const Mcformsubmission = async (req, res) => {
         phone,
         XFXzbGFzOH3dzvG6N1hE,
         jQzA3agN1c1EofZmpH2a,
+        NODrBeQuhzeTOSvdN15Y,
+        "23JDUPSJqKzBiNHTmxeT": answer_4,
+        lE6LCdA0ke44YBWzKxXQ: answer_5,
+        XBTbRZNWNYimvi8MHuez: answer_6,
         FdccxS3LYfhGNN2ODIjZ,
         wV5gAq9TPL9tp2UQvWKX,
         terms_and_conditions,
@@ -227,10 +234,13 @@ const Mcformsubmission = async (req, res) => {
         answer_1: XFXzbGFzOH3dzvG6N1hE,
         answer_2: jQzA3agN1c1EofZmpH2a,
         answer_3: FdccxS3LYfhGNN2ODIjZ,
+        answer_4: NODrBeQuhzeTOSvdN15Y,
+        answer_5: answer_4,
+        answer_6: answer_5,
+        answer_7: answer_6,
         consent: wV5gAq9TPL9tp2UQvWKX,
         terms_and_conditions,
       };
-
       res.status(200).json({
         message: "Latest form submission retrieved successfully",
         data: filteredData,
