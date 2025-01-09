@@ -236,6 +236,7 @@ const Mcformsubmission = async (req, res) => {
         "6wWSo6j66T3IPwnbSTz0": newField_5,
         oQq0RZOr0RQyFhZFACT1: newField_6,
         "9vGxxGQCEk43mz3jMoXj": newField_7,
+        Vpg8W9bMuHEkMVnKN0cw: newField_8, // Added new field
         "84tGrhrAfnZFnyelbFNN": answer_8,
         yB3nAnX0V2Wn2tEm5kd1,
         "9UDCoybzi2y2xgSnmr7T": answer_10,
@@ -341,6 +342,7 @@ const Mcformsubmission = async (req, res) => {
         answer_56: newField_5,
         answer_57: newField_6,
         answer_58: newField_7,
+        answer_59: Vpg8W9bMuHEkMVnKN0cw, // Added new field alias
         sales_goals,
         ad_placements,
         marketing_strategies,
