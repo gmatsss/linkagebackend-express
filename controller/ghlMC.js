@@ -187,8 +187,6 @@ const Mcformsubmission = async (req, res) => {
   try {
     const { name, email, phone, formid } = req.body;
 
-    //   console.log(req.body);
-
     const config = {
       method: "get",
       maxBodyLength: Infinity,
@@ -204,8 +202,6 @@ const Mcformsubmission = async (req, res) => {
     if (response.data && response.data.submissions.length > 0) {
       const latestSubmission = response.data.submissions[0];
 
-      console.log(latestSubmission);
-
       const {
         name,
         email,
@@ -215,12 +211,27 @@ const Mcformsubmission = async (req, res) => {
         phone,
         XFXzbGFzOH3dzvG6N1hE,
         jQzA3agN1c1EofZmpH2a,
-        NODrBeQuhzeTOSvdN15Y,
-        "23JDUPSJqKzBiNHTmxeT": answer_4,
-        lE6LCdA0ke44YBWzKxXQ: answer_5,
-        XBTbRZNWNYimvi8MHuez: answer_6,
+        JO12h57aq4PMWkWSDDJl,
+        fWx6Ubq742QlaQqK9e4z,
+        v9NC8ZRjPBXOgrCeWuhC,
+        a4gzdet9xvTkXoKDh989,
+        JkJF9O1YKe8r2p3BGfmz,
+        "84tGrhrAfnZFnyelbFNN": answer_8,
+        yB3nAnX0V2Wn2tEm5kd1,
+        "9UDCoybzi2y2xgSnmr7T": answer_10,
+        edxudbdwpYW68ijGbA4V,
+        Z5vvzKoV9xk5cOw06gzv,
+        "5nqMhitQTndgnA9SPqSe": answer_13,
+        "6FFZ7WxpITNKY6A9ebAS": answer_14,
+        godo08Udepym17XiuhA1,
+        kMJgRUoOSlJCj6uYAW6d,
+        vveeGd7Y7giZSFIR9z8J,
+        gcJPR4aiZdJn5A5IqcsM,
         FdccxS3LYfhGNN2ODIjZ,
         wV5gAq9TPL9tp2UQvWKX,
+        By3l1KvKgo46nAEL738p: sales_goals,
+        pn09m7As5qwiS6GN8b1Q: ad_placements,
+        TRKNMcITeblW2L5WDK3U: marketing_strategies,
         terms_and_conditions,
       } = latestSubmission;
 
@@ -234,13 +245,28 @@ const Mcformsubmission = async (req, res) => {
         answer_1: XFXzbGFzOH3dzvG6N1hE,
         answer_2: jQzA3agN1c1EofZmpH2a,
         answer_3: FdccxS3LYfhGNN2ODIjZ,
-        answer_4: NODrBeQuhzeTOSvdN15Y,
-        answer_5: answer_4,
-        answer_6: answer_5,
-        answer_7: answer_6,
+        answer_4: JO12h57aq4PMWkWSDDJl,
+        answer_5: fWx6Ubq742QlaQqK9e4z,
+        answer_6: v9NC8ZRjPBXOgrCeWuhC,
+        answer_7: a4gzdet9xvTkXoKDh989,
+        answer_8: answer_8,
+        answer_9: yB3nAnX0V2Wn2tEm5kd1,
+        answer_10: answer_10,
+        answer_11: edxudbdwpYW68ijGbA4V,
+        answer_12: Z5vvzKoV9xk5cOw06gzv,
+        answer_13: answer_13,
+        answer_14: answer_14,
+        answer_15: godo08Udepym17XiuhA1,
+        answer_16: kMJgRUoOSlJCj6uYAW6d,
+        answer_17: vveeGd7Y7giZSFIR9z8J,
+        answer_18: gcJPR4aiZdJn5A5IqcsM,
+        sales_goals,
+        ad_placements,
+        marketing_strategies,
         consent: wV5gAq9TPL9tp2UQvWKX,
         terms_and_conditions,
       };
+
       res.status(200).json({
         message: "Latest form submission retrieved successfully",
         data: filteredData,
