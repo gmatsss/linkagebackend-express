@@ -342,7 +342,7 @@ const Mcformsubmission = async (req, res) => {
         answer_56: newField_5,
         answer_57: newField_6,
         answer_58: newField_7,
-        answer_59: Vpg8W9bMuHEkMVnKN0cw, // Added new field alias
+        answer_59: newField_8,
         sales_goals,
         ad_placements,
         marketing_strategies,
