@@ -203,6 +203,7 @@ const Mcformsubmission = async (req, res) => {
       const latestSubmission = response.data.submissions[0];
 
       console.log(latestSubmission);
+
       const {
         name,
         email,
@@ -228,6 +229,9 @@ const Mcformsubmission = async (req, res) => {
         v9NC8ZRjPBXOgrCeWuhC,
         a4gzdet9xvTkXoKDh989,
         JkJF9O1YKe8r2p3BGfmz,
+        "0KoLtHsWdCvMpJqZlUsl": newField_1, // Newly added
+        qCFjBrTccs05CFOag6Vt: newField_2, // Newly added
+        nzdiDlCVE7sXUkyePmOF: newField_3, // Newly added
         "84tGrhrAfnZFnyelbFNN": answer_8,
         yB3nAnX0V2Wn2tEm5kd1,
         "9UDCoybzi2y2xgSnmr7T": answer_10,
@@ -326,6 +330,9 @@ const Mcformsubmission = async (req, res) => {
         answer_49: dcQTWd3KMGiEHwmLSilw,
         answer_50: qhLNSpj2JzD2nV3PxroV,
         answer_51: i9rXxmHVUVA3pqNypmAr,
+        answer_52: newField_1, // Newly added
+        answer_53: newField_2, // Newly added
+        answer_54: newField_3, // Newly added
         sales_goals,
         ad_placements,
         marketing_strategies,
