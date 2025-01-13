@@ -40,8 +40,8 @@ const fetchConversations = async () => {
 
     const params = {
       page_access_token: pageAccessToken,
-      // since: threeHoursAgoTimestamp,
-      // until: currentTimestamp,
+      since: threeHoursAgoTimestamp,
+      until: currentTimestamp,
     };
 
     const response = await axios.get(baseUrl, { params });
