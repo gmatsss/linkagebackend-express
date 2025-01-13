@@ -73,6 +73,14 @@ jobs:
                 {
                   "name": "ZOOM_ACCOUNT_ID",
                   "value": "${{ secrets.ZOOM_ACCOUNT_ID }}"
+                },
+                {
+                  "name": "ACCESS_TOKENPANCAKE",
+                  "value": "${{ secrets.ACCESS_TOKENPANCAKE }}"
+                },
+                {
+                  "name": "GHL_LINKAGEWEBSOL_TOKEN",
+                  "value": "${{ secrets.GHL_LINKAGEWEBSOL_TOKEN }}"
                 }
               ],
               "logConfiguration": {
