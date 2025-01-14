@@ -43,8 +43,6 @@ const fetchConversations = async () => {
 
     const params = {
       page_access_token: pageAccessToken,
-      since: twelveHoursAgoTimestamp,
-      until: currentTimestamp,
     };
 
     const response = await axios.get(baseUrl, { params });
@@ -65,6 +63,7 @@ const fetchConversations = async () => {
       });
 
     const postResults = [];
+    let zapierPosted = [];
 
     for (const data of interestedData) {
       try {
@@ -80,22 +79,36 @@ const fetchConversations = async () => {
         );
 
         const ghlContacts = ghlResponse.data.contacts || [];
-        const isLeadInGHL = ghlContacts.some(
-          (contact) =>
-            contact.email === data.email || contact.phone === data.phone
-        );
+
+        const isLeadInGHL = ghlContacts.some((contact) => {
+          const normalizeField = (field) =>
+            field?.trim().toLowerCase().replace(/\s+/g, "") || "";
+
+          const ghlName = normalizeField(
+            contact.contactName || `${contact.firstName} ${contact.lastName}`
+          );
+          const ghlEmail = normalizeField(contact.email);
+          const ghlPhone = contact.phone
+            ? contact.phone.replace(/\D/g, "")
+            : "";
+
+          const dataName = normalizeField(data.name);
+          const dataEmail = normalizeField(data.email);
+          const dataPhone = data.phone?.replace(/\D/g, "") || "";
+
+          return (
+            (ghlName && ghlName === dataName) ||
+            (ghlEmail && ghlEmail === dataEmail) ||
+            (ghlPhone && ghlPhone === dataPhone)
+          );
+        });
 
         if (!isLeadInGHL) {
           const postResponse = await axios.post(zapierEndpoint, data);
-          postResults.push({
+          zapierPosted.push({
             data,
             status: "Posted to Zapier",
             response: postResponse.data,
-          });
-        } else {
-          postResults.push({
-            data,
-            status: "Already exists in GHL",
           });
         }
       } catch (checkError) {
@@ -109,26 +122,38 @@ const fetchConversations = async () => {
       }
     }
 
-    // Send success message to Discord
+    if (zapierPosted.length === 0) {
+      await sendDiscordMessage({
+        title,
+        statusCode: 200,
+        message: `✅ All interested leads are already synced in GHL.`,
+        channelId: discordChannelId,
+      });
+
+      return {
+        success: true,
+        message: "All interested leads are already synced in GHL.",
+      };
+    }
+
     await sendDiscordMessage({
       title,
       statusCode: 200,
-      message: `✅ Fetch Conversations Executed Successfully\nData: ${JSON.stringify(
-        postResults
+      message: `✅ Sync completed. Leads posted to Zapier: ${JSON.stringify(
+        zapierPosted
       )}`,
-      channelId: discordChannelId, // Replace with your Discord channel ID
+      channelId: discordChannelId,
     });
 
-    return { success: true, postResults };
+    return { success: true, postedToZapier: zapierPosted };
   } catch (error) {
-    // Send error message to Discord
     await sendDiscordMessage({
       title,
       statusCode: 500,
       message: `❌ Fetch Conversations Failed\nError: ${
         error.response ? error.response.data : error.message
       }`,
-      channelId: discordChannelId, // Replace with your Discord channel ID
+      channelId: discordChannelId,
     });
 
     throw new Error(
