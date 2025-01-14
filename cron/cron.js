@@ -1,4 +1,6 @@
 const axios = require("axios");
+const { sendDiscordMessage } = require("../services/discordBotService");
+const discordChannelId = "1328533603163967661";
 
 const generatePageAccessToken = async (pageId, userAccessToken) => {
   const url = `https://pages.fm/api/v1/pages/${pageId}/generate_page_access_token`;
@@ -22,6 +24,7 @@ const generatePageAccessToken = async (pageId, userAccessToken) => {
 };
 
 const fetchConversations = async () => {
+  const title = "Sync Pancake to GHL interested Lead";
   const userAccessToken = process.env.ACCESS_TOKENPANCAKE;
   const pageId = "170920549759718";
   const baseUrl = `https://pages.fm/api/public_api/v2/pages/${pageId}/conversations`;
@@ -106,8 +109,28 @@ const fetchConversations = async () => {
       }
     }
 
+    // Send success message to Discord
+    await sendDiscordMessage({
+      title,
+      statusCode: 200,
+      message: `✅ Fetch Conversations Executed Successfully\nData: ${JSON.stringify(
+        postResults
+      )}`,
+      channelId: discordChannelId, // Replace with your Discord channel ID
+    });
+
     return { success: true, postResults };
   } catch (error) {
+    // Send error message to Discord
+    await sendDiscordMessage({
+      title,
+      statusCode: 500,
+      message: `❌ Fetch Conversations Failed\nError: ${
+        error.response ? error.response.data : error.message
+      }`,
+      channelId: discordChannelId, // Replace with your Discord channel ID
+    });
+
     throw new Error(
       `Failed to process cron job: ${
         error.response ? error.response.data : error.message
