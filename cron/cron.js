@@ -39,11 +39,11 @@ const fetchConversations = async () => {
     );
 
     const currentTimestamp = Math.floor(Date.now() / 1000);
-    const threeHoursAgoTimestamp = currentTimestamp - 10800;
+    const twelveHoursAgoTimestamp = currentTimestamp - 43200;
 
     const params = {
       page_access_token: pageAccessToken,
-      since: threeHoursAgoTimestamp,
+      since: twelveHoursAgoTimestamp,
       until: currentTimestamp,
     };
 
