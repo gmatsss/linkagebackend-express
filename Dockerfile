@@ -1,10 +1,10 @@
-# Dockerfile for Node.js Express
-FROM node:16-alpine
+# Use Node.js v18-alpine as the base image
+FROM node:18-alpine
 
 # Set working directory
 WORKDIR /usr/src/app
 
-# Copy package.json and install dependencies
+# Copy package.json and package-lock.json and install dependencies
 COPY package*.json ./
 RUN npm install
 
