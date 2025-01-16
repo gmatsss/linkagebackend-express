@@ -319,9 +319,9 @@ exports.re3luxuryReplyEvents = async (req, res) => {
 
     const analysis = analyzeResponse.data;
 
-    if (analysis.isNegative === true) {
+    if (analysis.isNegative === "true") {
       try {
-        await axios.post(
+        const deleteResponse = await axios.post(
           "https://api.instantly.ai/api/v1/lead/delete",
           {
             api_key: apiKey,
@@ -332,45 +332,62 @@ exports.re3luxuryReplyEvents = async (req, res) => {
           { headers: { "Content-Type": "application/json" } }
         );
 
-        await sendDiscordMessage({
-          title: "Negative Reply Received",
-          statusCode: 200,
-          message: `A negative reply has been received for the lead:\n\n**Email:** ${req.body.email}\n**Campaign Name:** ${req.body.campaign_name}\n\nThe lead has been removed from the campaign.`,
-          channelId: discordChannelId,
-        });
+        if (
+          deleteResponse.status === 200 &&
+          deleteResponse.data.status === "success" &&
+          deleteResponse.data.deleted > 0
+        ) {
+          await sendDiscordMessage({
+            title: "Negative Reply Received",
+            statusCode: 200,
+            message: `A negative reply has been received for the lead:\n\n**Email:** ${req.body.email}\n**Campaign Name:** ${req.body.campaign_name}\n\nThe lead has been removed from the campaign.`,
+            channelId: discordChannelId,
+          });
 
-        return res.status(200).send({
-          message: "Email reply categorized as negative. Lead removed.",
-          analysis,
-        });
+          return res.status(200).send({
+            message: "Email reply categorized as negative. Lead removed.",
+            analysis,
+            delete_response: deleteResponse.data,
+          });
+        } else {
+          return res.status(500).send({
+            message: "Failed to delete lead from the campaign.",
+            delete_response: deleteResponse.data,
+          });
+        }
       } catch (deleteError) {
         return res.status(500).send({
-          message: "Failed to delete lead from the campaign.",
+          message: "Error occurred during lead deletion.",
           error: deleteError.response?.data || deleteError.message,
         });
       }
+    } else if (analysis.isNegative === "false") {
+      const webhookResponse = await axios.post(
+        "https://hook.us2.make.com/4rvbhodrp5deg54dciiipnbyeonc3otn",
+        payload,
+        { headers: { "Content-Type": "application/json" } }
+      );
+
+      await sendDiscordMessage({
+        title: "Positive Reply Synced",
+        statusCode: 200,
+        message: `A positive reply has been received and successfully synced:\n\n**Email:** ${req.body.email}\n**Campaign Name:** ${req.body.campaign_name}\n\nThe lead has been posted to Make.com.`,
+        channelId: discordChannelId,
+      });
+
+      return res.status(200).send({
+        message: "Lead and reply data successfully sent to the webhook.",
+        analysis,
+        webhook_response: webhookResponse.data,
+      });
+    } else {
+      return res.status(400).send({
+        message: "Invalid analysis result.",
+        analysis,
+      });
     }
-
-    const webhookResponse = await axios.post(
-      "https://hook.us2.make.com/4rvbhodrp5deg54dciiipnbyeonc3otn",
-      payload,
-      { headers: { "Content-Type": "application/json" } }
-    );
-
-    await sendDiscordMessage({
-      title: "Positive Reply Synced",
-      statusCode: 200,
-      message: `A positive reply has been received and successfully synced:\n\n**Email:** ${req.body.email}\n**Campaign Name:** ${req.body.campaign_name}\n\nThe lead has been posted to Make.com.`,
-      channelId: discordChannelId,
-    });
-
-    res.status(200).send({
-      message: "Lead and reply data successfully sent to the webhook.",
-      analysis,
-      webhook_response: webhookResponse.data,
-    });
   } catch (error) {
-    res.status(500).send({
+    return res.status(500).send({
       message: "An error occurred during the process.",
       error: error.response?.data || error.message,
     });

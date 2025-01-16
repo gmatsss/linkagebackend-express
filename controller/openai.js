@@ -13,11 +13,14 @@ function preprocessEmailContent(content) {
   // Remove email footers (opt-out, unsubscribe, etc.)
   content = content.replace(/Opt-Out Option:.*|Unsubscribe here:.*/gi, "");
 
+  // Remove additional artifacts like email signatures, blank lines
+  content = content.replace(/^\s*[-]+.*$/gm, "");
+
   // Remove HTML tags if present
   content = content.replace(/<[^>]+>/g, "");
 
-  // Remove extra whitespace
-  content = content.trim();
+  // Remove extra whitespace and trim the final content
+  content = content.replace(/\n\s*\n/g, "\n").trim();
 
   return content;
 }
@@ -55,7 +58,6 @@ exports.chatWithOpenAI = async (req, res) => {
   - 'officeClosure': if the email states office closure.
   - 'autoReply': if the email is an automated response.
   - 'negativeKeyword': if the email includes one of the following keywords: 'BEANS', 'Pumpkin', 'Snowflake', 'Unicorn', 'Banana', 'Poof', 'Noodles', 'Rocket', 'Penguin', 'Hush', 'Zap', 'Toast' (considered a negative response).
-    
     
   Respond with a JSON object containing:
   - 'category': the identified category.
