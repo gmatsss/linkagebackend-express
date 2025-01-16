@@ -275,6 +275,9 @@ exports.re3luxuryReplyEvents = async (req, res) => {
     return res.status(400).send("Campaign ID did not match the filters.");
   }
 
+  const discordChannelId = "1329296261127606272";
+  const apiKey = "vc81ndan0f4yg2pghnzwz7yq4pnv";
+
   const payload = {
     campaign_id: req.body.campaign_id,
     campaign_name: req.body.campaign_name,
@@ -317,12 +320,35 @@ exports.re3luxuryReplyEvents = async (req, res) => {
     const analysis = analyzeResponse.data;
 
     if (analysis.isNegative === true) {
-      console.log("negative");
-      return res.status(200).send({
-        message:
-          "Email reply categorized as negative. No further action taken.",
-        analysis,
-      });
+      try {
+        await axios.post(
+          "https://api.instantly.ai/api/v1/lead/delete",
+          {
+            api_key: apiKey,
+            campaign_id: req.body.campaign_id,
+            delete_all_from_company: false,
+            delete_list: [req.body.email],
+          },
+          { headers: { "Content-Type": "application/json" } }
+        );
+
+        await sendDiscordMessage({
+          title: "Negative Reply Received",
+          statusCode: 200,
+          message: `A negative reply has been received for the lead:\n\n**Email:** ${req.body.email}\n**Campaign Name:** ${req.body.campaign_name}\n\nThe lead has been removed from the campaign.`,
+          channelId: discordChannelId,
+        });
+
+        return res.status(200).send({
+          message: "Email reply categorized as negative. Lead removed.",
+          analysis,
+        });
+      } catch (deleteError) {
+        return res.status(500).send({
+          message: "Failed to delete lead from the campaign.",
+          error: deleteError.response?.data || deleteError.message,
+        });
+      }
     }
 
     const webhookResponse = await axios.post(
@@ -330,6 +356,13 @@ exports.re3luxuryReplyEvents = async (req, res) => {
       payload,
       { headers: { "Content-Type": "application/json" } }
     );
+
+    await sendDiscordMessage({
+      title: "Positive Reply Synced",
+      statusCode: 200,
+      message: `A positive reply has been received and successfully synced:\n\n**Email:** ${req.body.email}\n**Campaign Name:** ${req.body.campaign_name}\n\nThe lead has been posted to Make.com.`,
+      channelId: discordChannelId,
+    });
 
     res.status(200).send({
       message: "Lead and reply data successfully sent to the webhook.",
