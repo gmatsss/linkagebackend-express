@@ -85,6 +85,10 @@ jobs:
                   {
                     "name": "DISCORD_TOKEN",
                     "value": "${{ secrets.DISCORD_TOKEN }}"
+                  },
+                  {
+                    "name": "OPENAI_API_KEY",
+                    "value": "${{ secrets.OPENAI_API_KEY }}"
                   }
                 ],
                 "logConfiguration": {

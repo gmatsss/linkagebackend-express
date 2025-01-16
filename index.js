@@ -12,6 +12,8 @@ const woocomerceRoute = require("./routes/woocomerce");
 const discordnotifRoute = require("./routes/discordnotif");
 const pancakeRoute = require("./routes/pancake");
 const ghlMCRoute = require("./routes/ghlMC");
+const instantlyRoute = require("./routes/instantly");
+const openaiRoute = require("./routes/openai");
 
 // Import cron jobs
 const fetchConversations = require("./cron/cron");
@@ -25,6 +27,8 @@ app.use("/test", helloRoute);
 app.use("/woo", woocomerceRoute);
 app.use("/pancake", pancakeRoute);
 app.use("/ghlMC", ghlMCRoute);
+app.use("/instantly", instantlyRoute);
+app.use("/openai", openaiRoute);
 
 // Health check route
 app.get("/health", (req, res) => {

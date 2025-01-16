@@ -37,10 +37,6 @@ const getConversations = async (req, res) => {
   }
 };
 
-module.exports = { getConversations };
-
-module.exports = { getConversations };
-
 module.exports = {
   getPages,
   getConversations,
