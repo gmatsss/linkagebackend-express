@@ -80,12 +80,19 @@ exports.re3luxuryOpenEvents = async (req, res) => {
 };
 
 exports.re3luxuryLinkclickEvents = async (req, res) => {
-  const campaignIdFilter = "1904684e-03fa-4ae1-b93b-871d407c52be";
-  const targetCampaignId = "abe29626-4f6d-4f41-bec9-3cae771e815e";
+  const campaignMappings = {
+    "1904684e-03fa-4ae1-b93b-871d407c52be":
+      "abe29626-4f6d-4f41-bec9-3cae771e815e", // RE3 Luxury Link Click
+    "4e7988c6-ee4c-4f1b-be97-a1fd49b5aa94":
+      "aeb07961-bb9b-47ed-88d5-09a8b997f8a6", // ACT Family
+  };
+
   const apiKey = "vc81ndan0f4yg2pghnzwz7yq4pnv";
   const discordChannelId = "1329296261127606272";
 
-  if (req.body.campaign_id === campaignIdFilter) {
+  const targetCampaignId = campaignMappings[req.body.campaign_id];
+
+  if (targetCampaignId) {
     const lead = {
       email: req.body.lead_email,
       first_name: req.body.firstName,
@@ -127,13 +134,19 @@ exports.re3luxuryLinkclickEvents = async (req, res) => {
       );
 
       const discordMessage = {
-        title: "Lead Transfer Successful to RE3 Luxury Real Estate Link Click",
+        title: `Lead Transfer Successful to ${
+          req.body.campaign_id === "1904684e-03fa-4ae1-b93b-871d407c52be"
+            ? "RE3 Luxury Real Estate Link Click"
+            : "ACT Family Target Campaign"
+        }`,
         statusCode: response.status,
-        message: `Lead successfully transferred to campaign "RE3 Luxury Real Estate Link Click".\n\n**Lead Data:**\nEmail: ${
-          lead.email
-        }\nFirst Name: ${lead.first_name}\nLast Name: ${
-          lead.last_name
-        }\nCompany Name: ${lead.company_name}\nPhone: ${lead.phone}\nWebsite: ${
+        message: `Lead successfully transferred to campaign "${
+          req.body.campaign_name
+        }".\n\n**Lead Data:**\nEmail: ${lead.email}\nFirst Name: ${
+          lead.first_name
+        }\nLast Name: ${lead.last_name}\nCompany Name: ${
+          lead.company_name
+        }\nPhone: ${lead.phone}\nWebsite: ${
           lead.website
         }\nCustom Variables: ${JSON.stringify(lead.custom_variables, null, 2)}`,
         channelId: discordChannelId,
@@ -144,7 +157,11 @@ exports.re3luxuryLinkclickEvents = async (req, res) => {
       res.send("Lead successfully added to the target campaign.");
     } catch (error) {
       await sendDiscordMessage({
-        title: "Lead Transfer Failed",
+        title: `Lead Transfer Failed for ${
+          req.body.campaign_id === "1904684e-03fa-4ae1-b93b-871d407c52be"
+            ? "RE3 Luxury Real Estate Link Click"
+            : "ACT Family Target Campaign"
+        }`,
         statusCode: 500,
         message: `Failed to transfer lead to campaign. Error: ${error.message}`,
         channelId: discordChannelId,
@@ -153,7 +170,7 @@ exports.re3luxuryLinkclickEvents = async (req, res) => {
       res.status(500).send("Failed to add lead to the target campaign.");
     }
   } else {
-    res.send("Request received but campaign ID did not match.");
+    res.status(400).send("Campaign ID did not match any target campaigns.");
   }
 };
 
@@ -264,14 +281,25 @@ exports.re3luxydownloadevent = async (req, res) => {
 };
 
 exports.re3luxuryReplyEvents = async (req, res) => {
-  const campaignIdFilters = [
+  const re3CampaignIdFilters = [
     "1904684e-03fa-4ae1-b93b-871d407c52be", // RE3 Luxury Real Estate
     "2e9776c5-b65d-4491-b15d-7386051f0fb8", // RE3 Luxury Real Estate Opened Email
     "abe29626-4f6d-4f41-bec9-3cae771e815e", // RE3 Luxury Real Estate Link Click
     "c2c3f672-242a-4bb2-b9da-c51c03dc68b5", // RE3 Luxury Real Estate Download Guide
   ];
 
-  if (!campaignIdFilters.includes(req.body.campaign_id)) {
+  const actFamilyCampaignIdFilters = [
+    "aeb07961-bb9b-47ed-88d5-09a8b997f8a6", // ACT Family link click
+    "4e7988c6-ee4c-4f1b-be97-a1fd49b5aa94", // ACT Family main
+  ];
+
+  // Combine both filters into one
+  const allCampaignIdFilters = [
+    ...re3CampaignIdFilters,
+    ...actFamilyCampaignIdFilters,
+  ];
+
+  if (!allCampaignIdFilters.includes(req.body.campaign_id)) {
     return res.status(400).send("Campaign ID did not match the filters.");
   }
 
@@ -307,7 +335,9 @@ exports.re3luxuryReplyEvents = async (req, res) => {
     reply_snippet: req.body.reply_text_snippet,
     is_first_reply: req.body.is_first,
     unibox_url: req.body.unibox_url,
-    filterwebhook: "RE3 Camp",
+    filterwebhook: actFamilyCampaignIdFilters.includes(req.body.campaign_id)
+      ? "ACT Family"
+      : "RE3 Camp",
   };
 
   try {
