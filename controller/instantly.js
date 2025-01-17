@@ -6,6 +6,7 @@ exports.re3luxuryOpenEvents = async (req, res) => {
   const targetCampaignId = "2e9776c5-b65d-4491-b15d-7386051f0fb8";
   const apiKey = "vc81ndan0f4yg2pghnzwz7yq4pnv";
   const discordChannelId = "1329296261127606272";
+  const mentionUserId = "336794456063737857"; // Your Discord user ID
 
   if (req.body.campaign_id === campaignIdFilter) {
     const lead = {
@@ -48,7 +49,7 @@ exports.re3luxuryOpenEvents = async (req, res) => {
         { headers: { "Content-Type": "application/json" } }
       );
 
-      const discordMessage = {
+      await sendDiscordMessage({
         title: "Lead Transfer Successful to RE3 Luxury Real Estate Open email",
         statusCode: response.status,
         message: `Lead successfully transferred to campaign "RE3 Luxury Real Estate Opened Email".\n\n**Lead Data:**\nEmail: ${
@@ -59,16 +60,14 @@ exports.re3luxuryOpenEvents = async (req, res) => {
           lead.website
         }\nCustom Variables: ${JSON.stringify(lead.custom_variables, null, 2)}`,
         channelId: discordChannelId,
-      };
-
-      await sendDiscordMessage(discordMessage);
+      });
 
       res.send("Lead successfully added to the target campaign.");
     } catch (error) {
       await sendDiscordMessage({
         title: "Lead Transfer Failed",
         statusCode: 500,
-        message: `Failed to transfer lead to campaign. Error: ${error.message}`,
+        message: `Failed to transfer lead to campaign. Error: ${error.message}\n\n<@${mentionUserId}> Please check this issue.`,
         channelId: discordChannelId,
       });
 
@@ -89,6 +88,7 @@ exports.re3luxuryLinkclickEvents = async (req, res) => {
 
   const apiKey = "vc81ndan0f4yg2pghnzwz7yq4pnv";
   const discordChannelId = "1329296261127606272";
+  const mentionUserId = "336794456063737857"; // Your user ID for mentions
 
   const targetCampaignId = campaignMappings[req.body.campaign_id];
 
@@ -163,7 +163,7 @@ exports.re3luxuryLinkclickEvents = async (req, res) => {
             : "ACT Family Target Campaign"
         }`,
         statusCode: 500,
-        message: `Failed to transfer lead to campaign. Error: ${error.message}`,
+        message: `Failed to transfer lead to campaign. Error: ${error.message}\n\n<@${mentionUserId}> Please check this issue.`,
         channelId: discordChannelId,
       });
 
@@ -179,6 +179,7 @@ exports.re3luxydownloadevent = async (req, res) => {
   const sourceCampaignId = "1904684e-03fa-4ae1-b93b-871d407c52be";
   const targetCampaignId = "c2c3f672-242a-4bb2-b9da-c51c03dc68b5";
   const discordChannelId = "1329296261127606272";
+  const mentionUserId = "336794456063737857"; // Your Discord User ID
 
   if (!req.body.email) {
     res.status(400).send("Email is required.");
@@ -262,7 +263,7 @@ exports.re3luxydownloadevent = async (req, res) => {
       await sendDiscordMessage({
         title: "No Lead Found",
         statusCode: 404,
-        message: `No lead data found for email: ${email}`,
+        message: `No lead data found for email: ${email}\n\n<@${mentionUserId}> Please check this issue.`,
         channelId: discordChannelId,
       });
 
@@ -272,7 +273,7 @@ exports.re3luxydownloadevent = async (req, res) => {
     await sendDiscordMessage({
       title: "Lead Transfer Failed",
       statusCode: 500,
-      message: `An error occurred while processing the lead. Error: ${error.message}`,
+      message: `An error occurred while processing the lead. Error: ${error.message}\n\n<@${mentionUserId}> Please check this issue.`,
       channelId: discordChannelId,
     });
 
@@ -293,18 +294,24 @@ exports.re3luxuryReplyEvents = async (req, res) => {
     "4e7988c6-ee4c-4f1b-be97-a1fd49b5aa94", // ACT Family main
   ];
 
-  // Combine both filters into one
   const allCampaignIdFilters = [
     ...re3CampaignIdFilters,
     ...actFamilyCampaignIdFilters,
   ];
 
+  const discordChannelId = "1329296261127606272";
+  const mentionUserId = "336794456063737857"; // Your Discord User ID
+  const apiKey = "vc81ndan0f4yg2pghnzwz7yq4pnv";
+
   if (!allCampaignIdFilters.includes(req.body.campaign_id)) {
     return res.status(400).send("Campaign ID did not match the filters.");
   }
 
-  const discordChannelId = "1329296261127606272";
-  const apiKey = "vc81ndan0f4yg2pghnzwz7yq4pnv";
+  const filterwebhook = actFamilyCampaignIdFilters.includes(
+    req.body.campaign_id
+  )
+    ? "ACT Family"
+    : "RE3 Camp";
 
   const payload = {
     campaign_id: req.body.campaign_id,
@@ -335,9 +342,7 @@ exports.re3luxuryReplyEvents = async (req, res) => {
     reply_snippet: req.body.reply_text_snippet,
     is_first_reply: req.body.is_first,
     unibox_url: req.body.unibox_url,
-    filterwebhook: actFamilyCampaignIdFilters.includes(req.body.campaign_id)
-      ? "ACT Family"
-      : "RE3 Camp",
+    filterwebhook,
   };
 
   try {
@@ -380,12 +385,16 @@ exports.re3luxuryReplyEvents = async (req, res) => {
             delete_response: deleteResponse.data,
           });
         } else {
-          return res.status(500).send({
-            message: "Failed to delete lead from the campaign.",
-            delete_response: deleteResponse.data,
-          });
+          throw new Error("Lead deletion failed.");
         }
       } catch (deleteError) {
+        await sendDiscordMessage({
+          title: "Lead Deletion Error",
+          statusCode: 500,
+          message: `Failed to delete lead from the campaign.\n\n**Email:** ${req.body.email}\n**Error:** ${deleteError.message}\n<@${mentionUserId}> Please investigate.`,
+          channelId: discordChannelId,
+        });
+
         return res.status(500).send({
           message: "Error occurred during lead deletion.",
           error: deleteError.response?.data || deleteError.message,
@@ -411,12 +420,16 @@ exports.re3luxuryReplyEvents = async (req, res) => {
         webhook_response: webhookResponse.data,
       });
     } else {
-      return res.status(400).send({
-        message: "Invalid analysis result.",
-        analysis,
-      });
+      throw new Error("Invalid analysis result.");
     }
   } catch (error) {
+    await sendDiscordMessage({
+      title: "Processing Error",
+      statusCode: 500,
+      message: `An error occurred while processing the reply.\n\n**Error:** ${error.message}\n<@${mentionUserId}> Please investigate.`,
+      channelId: discordChannelId,
+    });
+
     return res.status(500).send({
       message: "An error occurred during the process.",
       error: error.response?.data || error.message,
