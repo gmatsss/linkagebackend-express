@@ -64,10 +64,25 @@ exports.re3luxuryOpenEvents = async (req, res) => {
 
       res.send("Lead successfully added to the target campaign.");
     } catch (error) {
+      const errorDetails = error.response
+        ? error.response.data
+        : "No error details available";
+      const errorStatus = error.response
+        ? error.response.status
+        : "Unknown status";
+
       await sendDiscordMessage({
         title: "Lead Transfer Failed",
-        statusCode: 500,
-        message: `Failed to transfer lead to campaign. Error: ${error.message}\n\n<@${mentionUserId}> Please check this issue.`,
+        statusCode: errorStatus,
+        message: `Failed to transfer lead to campaign "${
+          req.body.campaign_name
+        }".\n\n**Error Details:**\nStatus Code: ${errorStatus}\nMessage: ${
+          error.message
+        }\nResponse: ${JSON.stringify(
+          errorDetails,
+          null,
+          2
+        )}\n\n<@${mentionUserId}> Please check this issue.`,
         channelId: discordChannelId,
       });
 
