@@ -12,6 +12,7 @@ exports.handleEstimateAccepted = (req, res) => {
   const customerFirstName = customerFullName.split(" ")[0];
   const estimateUrl = customData?.URL || "No URL provided";
   const message = `A new estimate has been accepted from ${customerFullName}. Please send an invoice to ${customerFirstName} GHL.`;
+
   //updated
   axios
     .post("https://hooks.zapier.com/hooks/catch/775472/28ov68b/", {

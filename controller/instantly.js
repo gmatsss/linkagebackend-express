@@ -42,12 +42,16 @@ exports.re3luxuryOpenEvents = async (req, res) => {
       leads: [lead],
     };
 
+    console.log("Prepared payload:", JSON.stringify(payload, null, 2));
+
     try {
       const response = await axios.post(
         "https://api.instantly.ai/api/v1/lead/add",
         payload,
         { headers: { "Content-Type": "application/json" } }
       );
+
+      console.log("API Response:", JSON.stringify(response.data, null, 2));
 
       await sendDiscordMessage({
         title: "Lead Transfer Successful to RE3 Luxury Real Estate Open email",
@@ -71,6 +75,13 @@ exports.re3luxuryOpenEvents = async (req, res) => {
         ? error.response.status
         : "Unknown status";
 
+      console.error("Error Details:", {
+        status: errorStatus,
+        message: error,
+        response: errorDetails,
+        requestPayload: payload,
+      });
+
       await sendDiscordMessage({
         title: "Lead Transfer Failed",
         statusCode: errorStatus,
@@ -89,6 +100,10 @@ exports.re3luxuryOpenEvents = async (req, res) => {
       res.status(500).send("Failed to add lead to the target campaign.");
     }
   } else {
+    console.log(
+      "Request received but campaign ID did not match:",
+      req.body.campaign_id
+    );
     res.send("Request received but campaign ID did not match.");
   }
 };
