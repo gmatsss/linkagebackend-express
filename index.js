@@ -14,6 +14,7 @@ const pancakeRoute = require("./routes/pancake");
 const ghlMCRoute = require("./routes/ghlMC");
 const instantlyRoute = require("./routes/instantly");
 const openaiRoute = require("./routes/openai");
+const itemRoutes = require("./routes/itemTest");
 
 // Import cron jobs
 const fetchConversations = require("./cron/cron");
@@ -29,6 +30,7 @@ app.use("/pancake", pancakeRoute);
 app.use("/ghlMC", ghlMCRoute);
 app.use("/instantly", instantlyRoute);
 app.use("/openai", openaiRoute);
+app.use("/itemdynamo", itemRoutes);
 
 // Health check route
 app.get("/health", (req, res) => {

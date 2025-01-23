@@ -89,6 +89,14 @@ jobs:
                   {
                     "name": "OPENAI_API_KEY",
                     "value": "${{ secrets.OPENAI_API_KEY }}"
+                  },
+                  {
+                    "name": "AWS_ACCESS_KEY_ID",
+                    "value": "${{ secrets.AWS_ACCESS_KEY_ID }}"
+                  },
+                  {
+                    "name": "AWS_SECRET_ACCESS_KEY",
+                    "value": "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
                   }
                 ],
                 "logConfiguration": {
