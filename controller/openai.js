@@ -1,27 +1,15 @@
 const axios = require("axios");
 
 function preprocessEmailContent(content) {
-  // Remove quoted email sections (lines starting with ">")
   content = content.replace(/^>.*$/gm, "");
-
-  // Remove email headers like "On Thu, Jan 16, 2025 at 1:24 PM"
   content = content.replace(
     /^On\s.+?\s\d{1,2}:\d{2}(?:\s[APap][Mm])?.+wrote:$/gm,
     ""
   );
-
-  // Remove email footers (opt-out, unsubscribe, etc.)
   content = content.replace(/Opt-Out Option:.*|Unsubscribe here:.*/gi, "");
-
-  // Remove additional artifacts like email signatures, blank lines
   content = content.replace(/^\s*[-]+.*$/gm, "");
-
-  // Remove HTML tags if present
   content = content.replace(/<[^>]+>/g, "");
-
-  // Remove extra whitespace and trim the final content
   content = content.replace(/\n\s*\n/g, "\n").trim();
-
   return content;
 }
 
@@ -31,8 +19,6 @@ exports.chatWithOpenAI = async (req, res) => {
     const url = "https://api.openai.com/v1/chat/completions";
 
     let messageContent = req.body.message;
-
-    // Preprocess the email content
     messageContent = preprocessEmailContent(messageContent);
 
     if (!messageContent || messageContent.trim() === "") {
