@@ -396,8 +396,103 @@ const Mcformsubmission = async (req, res) => {
   }
 };
 
+const scale4Ipget = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Get all forms
+    const formsConfig = {
+      method: "get",
+      maxBodyLength: Infinity,
+      url: "https://rest.gohighlevel.com/v1/forms/",
+      headers: {
+        Authorization:
+          "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2NhdGlvbl9pZCI6ImZWNHFYVlVHZmdLeUdYczVrQUFjIiwidmVyc2lvbiI6MSwiaWF0IjoxNzQwMTQ3MDQwNjY1fQ.WY_OdvkGah98_AwvLaFbULTPfNF2hp5SXC0_hHvypfY",
+      },
+    };
+
+    const formsResponse = await axios.request(formsConfig);
+    const availableForms = formsResponse.data.forms;
+    if (!availableForms || availableForms.length === 0) {
+      return res.status(404).json({ error: "No forms available." });
+    }
+
+    // For each form, request the latest submission for the provided email
+    const submissionRequests = availableForms.map(async (form) => {
+      const submissionsConfig = {
+        method: "get",
+        maxBodyLength: Infinity,
+        url: `https://rest.gohighlevel.com/v1/forms/submissions?page=1&limit=1&formId=${form.id}&q=${email}`,
+        headers: {
+          Authorization:
+            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsb2NhdGlvbl9pZCI6ImZWNHFYVlVHZmdLeUdYczVrQUFjIiwidmVyc2lvbiI6MSwiaWF0IjoxNzQwMTQ3MDQwNjY1fQ.WY_OdvkGah98_AwvLaFbULTPfNF2hp5SXC0_hHvypfY",
+        },
+      };
+
+      try {
+        const submissionResponse = await axios.request(submissionsConfig);
+        return { form, submission: submissionResponse.data };
+      } catch (submissionError) {
+        return { form, submission: null, error: submissionError.message };
+      }
+    });
+
+    const submissionsResults = await Promise.all(submissionRequests);
+
+    // Filter out forms with no submissions
+    const validSubmissions = submissionsResults.filter(
+      (result) =>
+        result.submission &&
+        result.submission.submissions &&
+        result.submission.submissions.length > 0
+    );
+
+    if (validSubmissions.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "No submissions found for the provided email." });
+    }
+
+    // Determine the most recent submission across all forms
+    const latestSubmission = validSubmissions.reduce((acc, cur) => {
+      const curCreatedAt = new Date(cur.submission.submissions[0].createdAt);
+      if (!acc) return cur;
+      const accCreatedAt = new Date(acc.submission.submissions[0].createdAt);
+      return curCreatedAt > accCreatedAt ? cur : acc;
+    }, null);
+
+    // Create the final response object with only the desired fields
+    const submissionData = {
+      formId: latestSubmission.form.id,
+      formName: latestSubmission.form.name,
+      userName: latestSubmission.submission.submissions[0].name,
+      email: latestSubmission.submission.submissions[0].email,
+      phone: latestSubmission.submission.submissions[0].phone,
+      ip: latestSubmission.submission.submissions[0].ip,
+    };
+
+    await sendDiscordMessage({
+      title: "Scale4Ipget Form IP Retrieval",
+      statusCode: 200,
+      message: `Latest submission retrieved for form "${submissionData.formName}" filled by ${submissionData.userName} with IP: ${submissionData.ip}`,
+      channelId: "1346272587088531499",
+    });
+
+    res.status(200).json({ submission: submissionData });
+  } catch (error) {
+    await sendDiscordMessage({
+      title: "Error in Scale4Ipget Form IP Retrieval",
+      statusCode: 500,
+      message: `<@336794456063737857> Error: ${error.message}`,
+      channelId: "1346272587088531499",
+    });
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   MCappointment,
   reSchedMCappointment,
   Mcformsubmission,
+  scale4Ipget,
 };
