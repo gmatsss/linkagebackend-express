@@ -1,6 +1,7 @@
 const axios = require("axios");
 const { DateTime } = require("luxon");
 const qs = require("qs");
+const { sendDiscordMessage } = require("../services/discordBotService");
 
 const MCappointment = async (req, res) => {
   const token =
@@ -202,8 +203,6 @@ const Mcformsubmission = async (req, res) => {
     if (response.data && response.data.submissions.length > 0) {
       const latestSubmission = response.data.submissions[0];
 
-      console.log(latestSubmission);
-
       const {
         name,
         email,
@@ -236,7 +235,7 @@ const Mcformsubmission = async (req, res) => {
         "6wWSo6j66T3IPwnbSTz0": newField_5,
         oQq0RZOr0RQyFhZFACT1: newField_6,
         "9vGxxGQCEk43mz3jMoXj": newField_7,
-        Vpg8W9bMuHEkMVnKN0cw: newField_8, // Added new field
+        Vpg8W9bMuHEkMVnKN0cw: newField_8,
         "84tGrhrAfnZFnyelbFNN": answer_8,
         yB3nAnX0V2Wn2tEm5kd1,
         "9UDCoybzi2y2xgSnmr7T": answer_10,
@@ -350,6 +349,17 @@ const Mcformsubmission = async (req, res) => {
         terms_and_conditions,
       };
 
+      await sendDiscordMessage({
+        title: "New Form Submission Retrieved",
+        statusCode: 200,
+        message: `**Email:** ${email}\n**Data:** ${JSON.stringify(
+          filteredData,
+          null,
+          2
+        )}`,
+        channelId: "1346272587088531499",
+      });
+
       res.status(200).json({
         message: "Latest form submission retrieved successfully",
         data: filteredData,
@@ -361,6 +371,14 @@ const Mcformsubmission = async (req, res) => {
     }
   } catch (error) {
     console.error("Error fetching form submissions:", error);
+
+    await sendDiscordMessage({
+      title: "Error Fetching Form Submission",
+      statusCode: 500,
+      message: `<@336794456063737857> **Error:** ${error.message}\n**Email:** ${req.body.email}`,
+      channelId: "1346272587088531499",
+    });
+
     res.status(500).json({
       message: "Failed to fetch form submissions",
       error: error.message,

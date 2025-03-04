@@ -11,26 +11,28 @@ const helloRoute = require("./routes/helloRoute");
 const woocomerceRoute = require("./routes/woocomerce");
 const discordnotifRoute = require("./routes/discordnotif");
 const pancakeRoute = require("./routes/pancake");
-const ghlMCRoute = require("./routes/ghlMC");
+const ghlMc = require("./routes/ghlMC");
 const instantlyRoute = require("./routes/instantly");
 const openaiRoute = require("./routes/openai");
 const itemRoutes = require("./routes/itemTest");
 
-// Import cron jobs
+const Whmcs = require("./routes/Whmcs");
+
 const fetchConversations = require("./cron/cron");
 
-// Middleware
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: "150mb" }));
+app.use(bodyParser.urlencoded({ limit: "150mb", extended: true }));
 
 // API routes
 app.use("/discordnotif", discordnotifRoute);
 app.use("/test", helloRoute);
 app.use("/woo", woocomerceRoute);
 app.use("/pancake", pancakeRoute);
-app.use("/ghlMC", ghlMCRoute);
+app.use("/ghlMCRoute", ghlMc);
 app.use("/instantly", instantlyRoute);
 app.use("/openai", openaiRoute);
 app.use("/itemdynamo", itemRoutes);
+app.use("/whmcs", Whmcs);
 
 // Health check route
 app.get("/health", (req, res) => {

@@ -50,12 +50,6 @@ The workflow is triggered on every push to the `main` branch, automating the bui
    **Example Response**: `"Healthy"`  
    **HTTP Status**: `200`
 
-3. **Test Endpoint**  
-   **URL**: `http://express-alb-531989323.us-east-1.elb.amazonaws.com/test/hello`  
-   **Purpose**: A test endpoint to confirm the application's behavior.  
-   **Example Response**: `"Hello from /test/hello"`  
-   **HTTP Status**: `200`
-
 ---
 
 ## Environment Variables
