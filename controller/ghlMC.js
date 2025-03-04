@@ -274,6 +274,8 @@ const Mcformsubmission = async (req, res) => {
         mtPZwjY6IoRjYSUcow2B,
         y2lucYVuo0datEPLaBTF,
         terms_and_conditions,
+        MlMZTMng271w7Aq8Isne,
+        sWwblt4RkSUcxHs1BSN2,
       } = latestSubmission;
 
       const filteredData = {
@@ -342,6 +344,8 @@ const Mcformsubmission = async (req, res) => {
         answer_57: newField_6,
         answer_58: newField_7,
         answer_59: newField_8,
+        answer_60: MlMZTMng271w7Aq8Isne,
+        answer_61: sWwblt4RkSUcxHs1BSN2,
         sales_goals,
         ad_placements,
         marketing_strategies,
@@ -349,16 +353,21 @@ const Mcformsubmission = async (req, res) => {
         terms_and_conditions,
       };
 
-      await sendDiscordMessage({
+      let content = `**Email:** ${email}\n**Data:** ${JSON.stringify(
+        filteredData,
+        null,
+        2
+      )}`;
+      if (content.length > 1800) {
+        content = content.substring(0, 1800) + "...";
+      }
+      const payload = {
         title: "New Form Submission Retrieved",
         statusCode: 200,
-        message: `**Email:** ${email}\n**Data:** ${JSON.stringify(
-          filteredData,
-          null,
-          2
-        )}`,
+        content,
         channelId: "1346272587088531499",
-      });
+      };
+      await sendDiscordMessage(payload);
 
       res.status(200).json({
         message: "Latest form submission retrieved successfully",
