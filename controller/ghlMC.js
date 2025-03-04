@@ -353,21 +353,22 @@ const Mcformsubmission = async (req, res) => {
         terms_and_conditions,
       };
 
-      let content = `**Email:** ${email}\n**Data:** ${JSON.stringify(
-        filteredData,
-        null,
-        2
-      )}`;
-      if (content.length > 1800) {
-        content = content.substring(0, 1800) + "...";
-      }
-      const payload = {
+      const summaryContent = `**Name:** ${filteredData.name}
+**Email:** ${filteredData.email}
+**Created At:** ${filteredData.createdAt}
+**Full Name:** ${filteredData.full_name}
+**Organization:** ${filteredData.organization}
+**Phone:** ${filteredData.phone}
+
+**View More on GHL contacts
+`;
+
+      await sendDiscordMessage({
         title: "New Form Submission Retrieved",
         statusCode: 200,
-        content,
+        message: summaryContent,
         channelId: "1346272587088531499",
-      };
-      await sendDiscordMessage(payload);
+      });
 
       res.status(200).json({
         message: "Latest form submission retrieved successfully",
