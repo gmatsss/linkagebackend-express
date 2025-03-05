@@ -16,6 +16,7 @@ const scrapeEstimate = async (estimateUrl) => {
       executablePath:
         process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium",
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      timeout: 60000,
     });
 
     const page = await browser.newPage();
