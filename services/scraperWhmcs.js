@@ -10,7 +10,6 @@ const scrapeEstimate = async (estimateUrl) => {
       throw new Error("Estimate URL is missing.");
     }
 
-    // Launch Puppeteer using the system-installed Chromium and proper flags
     const browser = await puppeteer.launch({
       headless: true,
       executablePath:
@@ -20,11 +19,14 @@ const scrapeEstimate = async (estimateUrl) => {
     });
 
     const page = await browser.newPage();
+
+    page.on("console", (msg) => console.log("PAGE LOG:", msg.text()));
+
     await page.setUserAgent(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
     );
     await page.goto(estimateUrl, { waitUntil: "networkidle2", timeout: 60000 });
-    await page.waitForSelector(".flex.hover\\:bg-gray-50", { timeout: 10000 });
+    await page.waitForSelector(".flex.hover\\:bg-gray-50", { timeout: 30000 });
 
     const lineItems = await page.evaluate(() => {
       return Array.from(
