@@ -10,13 +10,18 @@ const scrapeEstimate = async (estimateUrl) => {
       throw new Error("Estimate URL is missing.");
     }
 
-    const browser = await puppeteer.launch({ headless: true });
-    const page = await browser.newPage();
+    // Launch Puppeteer using the system-installed Chromium and proper flags
+    const browser = await puppeteer.launch({
+      headless: true,
+      executablePath:
+        process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium",
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
 
+    const page = await browser.newPage();
     await page.setUserAgent(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
     );
-
     await page.goto(estimateUrl, { waitUntil: "networkidle2" });
     await page.waitForSelector(".flex.hover\\:bg-gray-50", { timeout: 10000 });
 
@@ -70,7 +75,6 @@ const scrapeEstimate = async (estimateUrl) => {
       let itemText = `**${index + 1}. ${item.productName}**\n   - 💬 ${
         item.productDescription
       }\n   - 💰 Price: ${item.price}\n   - 🏷️ Total: ${item.total}\n\n`;
-
       if (
         currentMessage.length + itemText.length >
         MAX_DISCORD_MESSAGE_LENGTH
@@ -102,7 +106,6 @@ const scrapeEstimate = async (estimateUrl) => {
       message: `<@336794456063737857> Error occurred while scraping: ${error.message}\n🔗 [Check Estimate](${estimateUrl})`,
       channelId: DISCORD_CHANNEL_ID,
     });
-
     throw error;
   }
 };
