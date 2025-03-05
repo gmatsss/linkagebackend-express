@@ -23,7 +23,7 @@ const scrapeEstimate = async (estimateUrl) => {
     await page.setUserAgent(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
     );
-    await page.goto(estimateUrl, { waitUntil: "networkidle2" });
+    await page.goto(estimateUrl, { waitUntil: "networkidle2", timeout: 60000 });
     await page.waitForSelector(".flex.hover\\:bg-gray-50", { timeout: 10000 });
 
     const lineItems = await page.evaluate(() => {

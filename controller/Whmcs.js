@@ -12,11 +12,8 @@ const buildRequestParams = (action, additionalParams) => ({
   ...additionalParams,
 });
 
-// Function to handle estimate processing
 exports.receiveEstimateGhl = async (req, res) => {
   try {
-    console.log("Received request body:", req.body);
-
     const estimateUrl = req.body.customData?.estiUlr;
     if (!estimateUrl) {
       return res.status(400).json({ error: "Estimate URL is missing." });
@@ -41,7 +38,7 @@ exports.receiveEstimateGhl = async (req, res) => {
 
     console.log("Sending request to WHMCS API through proxy...");
     const response = await axios.post(
-      "http://localhost:3000/whmcs-api", // 🔥 Hardcoded proxy URL
+      "http://localhost:3000/whmcs-api",
       formParams.toString(),
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     );
