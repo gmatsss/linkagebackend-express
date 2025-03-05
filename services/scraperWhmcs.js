@@ -10,14 +10,17 @@ const scrapeEstimate = async (estimateUrl) => {
       throw new Error("Estimate URL is missing.");
     }
 
-    const browser = await puppeteer.launch({
+    browser = await puppeteer.launch({
       headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
       executablePath:
         process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      timeout: 60000,
-      protocolTimeout: 60000,
     });
+
+    page.on("error", (err) => console.error("Page error:", err));
+    page.on("pageerror", (pageErr) =>
+      console.error("Page console error:", pageErr)
+    );
 
     const page = await browser.newPage();
 
@@ -26,7 +29,11 @@ const scrapeEstimate = async (estimateUrl) => {
     await page.setUserAgent(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
     );
-    await page.goto(estimateUrl, { waitUntil: "networkidle2", timeout: 60000 });
+    await page.goto(estimateUrl, {
+      waitUntil: "networkidle2",
+      timeout: 120000,
+    });
+
     await page.waitForSelector(".flex.hover\\:bg-gray-50", { timeout: 30000 });
 
     const lineItems = await page.evaluate(() => {

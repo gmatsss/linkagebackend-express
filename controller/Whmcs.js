@@ -19,6 +19,8 @@ exports.receiveEstimateGhl = async (req, res) => {
       return res.status(400).json({ error: "Estimate URL is missing." });
     }
 
+    console.log("Scraping estimate from:", estimateUrl);
+
     const lineItems = await scrapeEstimate(estimateUrl);
 
     const quoteParams = {
