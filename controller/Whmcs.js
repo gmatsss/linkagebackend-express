@@ -60,3 +60,16 @@ exports.receiveEstimateGhl = async (req, res) => {
     });
   }
 };
+
+exports.testConnectivity = async (req, res) => {
+  const { exec } = require("child_process");
+  exec(
+    "curl -I https://link.murphyconsulting.us/l/vW8toYeaA",
+    (error, stdout, stderr) => {
+      if (error) {
+        return res.status(500).send(`Error: ${error.message}`);
+      }
+      res.send(`STDOUT: ${stdout}\nSTDERR: ${stderr}`);
+    }
+  );
+};
