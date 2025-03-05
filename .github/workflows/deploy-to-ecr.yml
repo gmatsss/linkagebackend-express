@@ -43,8 +43,8 @@ jobs:
               {
                 "name": "express-backend",
                 "image": "${{ env.ECR_REPOSITORY_URI }}:latest",
-                "memory": 1024,
-                "cpu": 512,
+                "memory": 2048,
+                "cpu": 1024,
                 "essential": true,
                 "portMappings": [
                   {
@@ -111,8 +111,8 @@ jobs:
             ],
             "networkMode": "awsvpc",
             "requiresCompatibilities": ["FARGATE"],
-            "cpu": "512",
-            "memory": "1024"
+            "cpu": "1024",
+            "memory": "2048"
           }' > task-definition.json
 
           aws ecs register-task-definition --cli-input-json file://task-definition.json
