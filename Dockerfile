@@ -1,14 +1,15 @@
 # Use Node.js 18 on Alpine as the base image
 FROM node:18-alpine
 
-# Install Chromium and required dependencies
+# Install Chromium, required dependencies, and curl
 RUN apk add --no-cache \
     chromium \
     nss \
     freetype \
     harfbuzz \
     ca-certificates \
-    ttf-freefont
+    ttf-freefont \
+    curl  # <-- Add this line to install curl
 
 # Set environment variables for Puppeteer
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
