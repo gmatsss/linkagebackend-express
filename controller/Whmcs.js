@@ -19,7 +19,6 @@ exports.receiveEstimateGhl = async (req, res) => {
       return res.status(400).json({ error: "Estimate URL is missing." });
     }
 
-    console.log(`Scraping estimate from: ${estimateUrl}`);
     const lineItems = await scrapeEstimate(estimateUrl);
 
     const quoteParams = {
@@ -36,14 +35,13 @@ exports.receiveEstimateGhl = async (req, res) => {
     const params = buildRequestParams("CreateQuote", quoteParams);
     const formParams = new URLSearchParams(params);
 
-    console.log("Sending request to WHMCS API through proxy...");
     const response = await axios.post(
       "http://localhost:3000/whmcs-api",
       formParams.toString(),
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     );
 
-    console.log("Received response from WHMCS API:", response.data);
+    console.log("WHMCS API response:", response.data);
     return res.status(200).json({
       message: "Estimate received and quote created successfully!",
       estimateUrl,
