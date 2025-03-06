@@ -95,6 +95,18 @@ jobs:
                     "value": "${{ secrets.AWS_ACCESS_KEY_ID }}"
                   },
                   {
+                    "name": "WHMCS_API_URL",
+                    "value": "${{ secrets.WHMCS_API_URL }}"
+                  },
+                    {
+                    "name": "WHMCS_API_IDENTIFIER",
+                    "value": "${{ secrets.WHMCS_API_IDENTIFIER }}"
+                  },
+                    {
+                    "name": "WHMCS_API_SECRET",
+                    "value": "${{ secrets.WHMCS_API_SECRET }}"
+                  },
+                  {
                     "name": "AWS_SECRET_ACCESS_KEY",
                     "value": "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
                   }

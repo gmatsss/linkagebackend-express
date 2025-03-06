@@ -2,7 +2,6 @@ require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const cron = require("node-cron");
-const proxy = require("express-http-proxy");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,21 +9,6 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(bodyParser.json({ limit: "150mb" }));
 app.use(bodyParser.urlencoded({ limit: "150mb", extended: true }));
-
-const WHMCS_API_URL = "https://my.murphyconsulting.us"; // 🔥 Hardcoded WHMCS API URL
-
-const whmcsProxy = proxy(WHMCS_API_URL, {
-  proxyReqPathResolver: () => "/includes/api.php",
-  proxyReqOptDecorator: (proxyReqOpts) => {
-    proxyReqOpts.headers["Content-Type"] = "application/x-www-form-urlencoded";
-    return proxyReqOpts;
-  },
-  proxyReqBodyDecorator: (bodyContent) => {
-    return new URLSearchParams(bodyContent).toString();
-  },
-});
-
-app.use("/whmcs-api", whmcsProxy);
 
 // Import routes
 const helloRoute = require("./routes/helloRoute");

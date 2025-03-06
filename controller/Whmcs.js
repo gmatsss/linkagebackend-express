@@ -1,59 +1,102 @@
-const { scrapeEstimate } = require("../services/scraperWhmcs");
-const axios = require("axios");
-
-const WHMCS_API_IDENTIFIER = "jqI0u3EkPjjL38cEos38MVe5IsrX7LGQ";
-const WHMCS_API_SECRET = "76rDuutcKsCM4F0GeCP68B3L7qXNLWHi";
-
-const buildRequestParams = (action, additionalParams) => ({
-  action,
-  identifier: WHMCS_API_IDENTIFIER,
-  secret: WHMCS_API_SECRET,
-  responsetype: "json",
-  ...additionalParams,
-});
+// controllers/whmcsController.js
+const {
+  getClientDetails,
+} = require("../services/whmcsService/whmcsClientService");
+const {
+  encodeLineItems,
+  createQuote,
+  formatDateToYYYYMMDD,
+} = require("../services/whmcsService/whmcsQuoteService");
+const {
+  scrapeEstimateLocal,
+  scrapeEstimate,
+} = require("../services/whmcsService/scraperWhmcs");
 
 exports.receiveEstimateGhl = async (req, res) => {
   try {
+    console.log("Request Body:", req.body);
+
+    let clientDetails = {};
+    let clientId = null;
+    try {
+      const clientEmail = req.body.email;
+      const details = await getClientDetails(clientEmail);
+      clientDetails = details;
+      if (
+        details &&
+        details.result === "success" &&
+        details.client &&
+        details.client.id
+      ) {
+        clientId = details.client.id;
+      }
+    } catch (err) {
+      console.warn(
+        "Failed to fetch client details, fallback will be used.",
+        err.message
+      );
+      clientDetails = {
+        email: req.body.email || "",
+        phone: req.body.phone || "",
+        first_name: req.body.first_name || "",
+        last_name: req.body.last_name || "",
+        company_name: req.body.company_name || "",
+        address1: req.body.address1 || "",
+        address2: req.body.address2 || "",
+        city: req.body.city || "",
+        state: req.body.state || "",
+        postcode: req.body.postcode || "",
+        country: req.body.country || "",
+      };
+    }
+
     const estimateUrl = req.body.customData?.estiUlr;
     if (!estimateUrl) {
       return res.status(400).json({ error: "Estimate URL is missing." });
     }
 
-    console.log("Scraping estimate from:", estimateUrl);
+    const { lineItems, metaData } = await scrapeEstimate(estimateUrl);
+    const encodedLineItems = encodeLineItems(lineItems);
 
-    const lineItems = await scrapeEstimate(estimateUrl);
+    const finalExpiryDate =
+      metaData && metaData.expiryDate
+        ? formatDateToYYYYMMDD(metaData.expiryDate)
+        : formatDateToYYYYMMDD(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+
+    const finalIssueDate =
+      metaData && metaData.issueDate
+        ? formatDateToYYYYMMDD(metaData.issueDate)
+        : "";
 
     const quoteParams = {
-      subject: req.body.subject || "Estimate Quote",
-      stage: req.body.stage || "Draft",
-      validuntil:
-        req.body.validuntil ||
-        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0],
-      lineitems: JSON.stringify(lineItems),
+      subject: req.body.customData?.estiname || "Estimate Quote on Venderflow",
+      stage: "Delivered",
+      validuntil: finalExpiryDate,
+      datecreated: finalIssueDate,
+      lineitems: encodedLineItems,
     };
 
-    const params = buildRequestParams("CreateQuote", quoteParams);
-    const formParams = new URLSearchParams(params);
+    if (clientId) {
+      quoteParams.userid = clientId;
+    } else {
+      quoteParams.email = clientDetails.email || "";
+    }
 
-    const response = await axios.post(
-      "http://localhost:3000/whmcs-api",
-      formParams.toString(),
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
-    );
-
-    console.log("WHMCS API response:", response.data);
+    const quoteResponse = await createQuote(quoteParams);
+    console.log("WHMCS Quote API response:", quoteResponse);
     return res.status(200).json({
-      message: "Estimate received and quote created successfully!",
+      message:
+        "Client details obtained, estimate received, and quote created successfully!",
+      clientDetails,
       estimateUrl,
       lineItems,
-      quoteResponse: response.data,
+      quoteResponse,
     });
   } catch (error) {
-    console.error("Error in receiveEstimateGhl workflow:", error);
+    console.error("Error in workflow:", error.message || error);
     return res.status(500).json({
-      error: "An error occurred while processing the estimate.",
+      error:
+        error.message || "An error occurred while processing the estimate.",
     });
   }
 };

@@ -25,6 +25,7 @@
     "luxon": "^3.5.0",
     "node-cron": "^3.0.3",
     "path": "^0.12.7",
+    "php-serialize": "^5.1.2",
     "puppeteer": "^24.3.0"
   }
 }
