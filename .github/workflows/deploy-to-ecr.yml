@@ -98,11 +98,11 @@ jobs:
                     "name": "WHMCS_API_URL",
                     "value": "${{ secrets.WHMCS_API_URL }}"
                   },
-                    {
+                  {
                     "name": "WHMCS_API_IDENTIFIER",
                     "value": "${{ secrets.WHMCS_API_IDENTIFIER }}"
                   },
-                    {
+                  {
                     "name": "WHMCS_API_SECRET",
                     "value": "${{ secrets.WHMCS_API_SECRET }}"
                   },
@@ -133,3 +133,12 @@ jobs:
         run: |
           TASK_DEFINITION_ARN=$(aws ecs describe-task-definition --task-definition LinkageTaskDefinition --query 'taskDefinition.taskDefinitionArn' --output text)
           aws ecs update-service --cluster LinkageCluster --service express-backend-service-v2 --task-definition $TASK_DEFINITION_ARN --force-new-deployment
+
+      - name: Update ECS Service Network Configuration (Disable Auto-Assign Public IP)
+        run: |
+          # Replace subnet IDs with all subnets you see in your "Network configuration"
+          # Replace the security group ID with the correct one for your ECS service
+          aws ecs update-service \
+            --cluster LinkageCluster \
+            --service express-backend-service-v2 \
+            --network-configuration "awsvpcConfiguration={subnets=[subnet-08ba67be277c63954,subnet-0a45525d41df0cf51,subnet-0e5d34c227a1111fc],securityGroups=[sg-05bc3dff8e3341287],assignPublicIp=DISABLED}"
