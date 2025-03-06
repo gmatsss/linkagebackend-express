@@ -29,6 +29,9 @@ const getClientDetails = async (clientEmail) => {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
     });
 
+    // Log client details to console
+    console.log("Client Details Response:", response.data);
+
     await sendDiscordMessage({
       title: "Client Details Retrieved",
       statusCode: 200,

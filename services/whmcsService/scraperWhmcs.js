@@ -312,6 +312,4 @@ const scrapeEstimate = async (estimateUrl) => {
   }
 };
 
-//redeploy
-
 module.exports = { scrapeEstimate, scrapeEstimateLocal };
