@@ -136,9 +136,9 @@ jobs:
 
       - name: Update ECS Service Network Configuration (Disable Auto-Assign Public IP)
         run: |
-          # Replace subnet IDs with all subnets you see in your "Network configuration"
+          # Replace subnet IDs with the ones from your Network configuration
           # Replace the security group ID with the correct one for your ECS service
           aws ecs update-service \
             --cluster LinkageCluster \
             --service express-backend-service-v2 \
-            --network-configuration "awsvpcConfiguration={subnets=[subnet-08ba67be277c63954,subnet-0a45525d41df0cf51,subnet-0e5d34c227a1111fc],securityGroups=[sg-05bc3dff8e3341287],assignPublicIp=DISABLED}"
+            --network-configuration "awsvpcConfiguration={subnets=[subnet-08ba67be277c63954,subnet-0a45525d41df0cf51],securityGroups=[sg-05bc3dff8e3341287],assignPublicIp=DISABLED}"
