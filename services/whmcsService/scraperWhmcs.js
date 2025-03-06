@@ -282,12 +282,20 @@ const scrapeEstimate = async (estimateUrl) => {
     if (lineItems.length === 0)
       console.warn(`No line items found for ${estimateUrl}`);
     console.log(`Scraped ${lineItems.length} line items successfully.`);
+
+    // Prepare a version of lineItems without the description.
+    const lineItemsNoDesc = lineItems.map((item) => ({
+      productName: item.productName,
+      price: item.price,
+      total: item.total,
+    }));
+
     await sendDiscordMessage({
       title: "Estimate Scraped",
       statusCode: 200,
       message: `Estimate: ${estimateUrl}\nMeta Data: ${JSON.stringify(
         metaData
-      )}\nLine Items: ${JSON.stringify(lineItems)}`,
+      )}\nLine Items: ${JSON.stringify(lineItemsNoDesc)}`,
       channelId: DISCORD_CHANNEL_ID,
     });
     return { lineItems, metaData };

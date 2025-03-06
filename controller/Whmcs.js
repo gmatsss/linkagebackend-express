@@ -14,8 +14,6 @@ const {
 
 exports.receiveEstimateGhl = async (req, res) => {
   try {
-    console.log("Request Body:", req.body);
-
     let clientDetails = {};
     let clientId = null;
     try {
