@@ -141,4 +141,4 @@ jobs:
           aws ecs update-service \
             --cluster LinkageCluster \
             --service express-backend-service-v2 \
-            --network-configuration "awsvpcConfiguration={subnets=[subnet-08ba67be277c63954,subnet-0a45525d41df0cf51],securityGroups=[sg-05bc3dff8e3341287],assignPublicIp=DISABLED}"
+            --network-configuration "awsvpcConfiguration={subnets=[subnet-052c898ef405e7e4e],securityGroups=[sg-05bc3dff8e3341287],assignPublicIp=DISABLED}"
