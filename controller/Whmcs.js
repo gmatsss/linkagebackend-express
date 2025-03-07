@@ -115,14 +115,31 @@ exports.receiveEstimateGhl = async (req, res) => {
 };
 
 exports.testConnectivity = async (req, res) => {
-  const { exec } = require("child_process");
-  exec(
-    "curl -I https://link.murphyconsulting.us/l/vW8toYeaA",
-    (error, stdout, stderr) => {
-      if (error) {
-        return res.status(500).send(`Error: ${error.message}`);
-      }
-      res.send(`STDOUT: ${stdout}\nSTDERR: ${stderr}`);
-    }
-  );
+  try {
+    // Make a GET request to the logRequest endpoint using Axios
+    const response = await axios.get(
+      "https://6eec-111-125-104-254.ngrok-free.app/whmcs/logRequest"
+    );
+
+    // Send back the response data from the logRequest endpoint
+    res.send(
+      `Response from logRequest endpoint: ${JSON.stringify(response.data)}`
+    );
+  } catch (error) {
+    // Handle errors and return an error response
+    res.status(500).send(`Error: ${error.message}`);
+  }
+};
+
+// controllers/ipController.js
+exports.logRequest = (req, res, next) => {
+  // Extract the IP address from headers or connection
+  const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
+  console.log("Incoming request from IP:", ip);
+
+  // Optionally attach the IP to the request for further use
+  req.loggedIP = ip;
+
+  // Call next() to proceed to the next middleware/controller
+  next();
 };
