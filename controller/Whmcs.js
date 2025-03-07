@@ -1,4 +1,6 @@
 const QuoteModel = require("../dynamodb/model/Quote");
+const { sendDiscordMessage } = require("../services/discordBotService");
+
 const {
   getClientDetails,
 } = require("../services/whmcsService/whmcsClientService");
@@ -7,12 +9,126 @@ const {
   createQuote,
   formatDateToYYYYMMDD,
 } = require("../services/whmcsService/whmcsQuoteService");
+
 const {
   scrapeEstimateLocal,
   scrapeEstimate,
 } = require("../services/whmcsService/scraperWhmcs");
 
-const axios = require("axios");
+const {
+  findQuote,
+  updateQuoteInWhmcs,
+  notifyQuoteUpdated,
+} = require("../services/whmcsService/whmcUpdateQuote");
+
+const {
+  findQuoteForDeadStatus,
+  updateQuoteToDeadInWhmcs,
+  notifyQuoteMarkedDead,
+} = require("../services/whmcsService/whmcsDeadService");
+
+exports.markQuoteAsDead = async (req, res) => {
+  const userEmail = req.body.email;
+  const estimateUrl = req.body.customData?.estiUlr;
+
+  if (!userEmail || !estimateUrl) {
+    await sendDiscordMessage({
+      title: "Quote Update Failed",
+      statusCode: 400,
+      message: "Missing user email or estimate URL.",
+      channelId: "1345967280605102120",
+    });
+    return res
+      .status(400)
+      .json({ error: "Missing user email or estimate URL." });
+  }
+
+  try {
+    // ✅ Find the quote in DynamoDB
+    const quote = await findQuoteForDeadStatus(userEmail, estimateUrl);
+    if (!quote) return res.status(404).json({ error: "Quote not found." });
+
+    // ✅ Update the quote in WHMCS to "Dead"
+    const quoteUpdated = await updateQuoteToDeadInWhmcs(quote.quoteId);
+    if (!quoteUpdated)
+      return res
+        .status(500)
+        .json({ error: "Failed to update quote in WHMCS." });
+
+    // ✅ Send success message to Discord
+    await notifyQuoteMarkedDead(
+      estimateUrl,
+      req.body.first_name,
+      req.body.last_name,
+      userEmail,
+      quote.quoteId
+    );
+
+    res.status(200).json({
+      message: "Quote successfully marked as 'Dead' in WHMCS!",
+      quoteId: quote.quoteId,
+    });
+  } catch (error) {
+    await sendDiscordMessage({
+      title: "Error Updating Quote to Dead",
+      statusCode: 500,
+      message: `<@336794456063737857> An error occurred while updating the quote to 'Dead'.\n\n**Error:** ${error.message}`,
+      channelId: "1345967280605102120",
+    });
+
+    res.status(500).json({ error: "Internal server error." });
+  }
+};
+
+exports.acceptquotewhmcs = async (req, res) => {
+  const userEmail = req.body.email;
+  const estimateUrl = req.body.customData?.estiUlr;
+
+  if (!userEmail || !estimateUrl) {
+    await sendDiscordMessage({
+      title: "Quote Update Failed",
+      statusCode: 400,
+      message: "Missing user email or estimate URL.",
+      channelId: "1345967280605102120",
+    });
+    return res
+      .status(400)
+      .json({ error: "Missing user email or estimate URL." });
+  }
+
+  try {
+    const quote = await findQuote(userEmail, estimateUrl);
+    if (!quote) return res.status(404).json({ error: "Quote not found." });
+
+    const quoteUpdated = await updateQuoteInWhmcs(quote.quoteId);
+    if (!quoteUpdated)
+      return res
+        .status(500)
+        .json({ error: "Failed to update quote in WHMCS." });
+
+    await notifyQuoteUpdated(
+      estimateUrl,
+      req.body.first_name,
+      req.body.last_name,
+      userEmail,
+      quote.quoteId
+    );
+
+    res.status(200).json({
+      message: "Quote updated successfully in WHMCS!",
+      quoteId: quote.quoteId,
+    });
+  } catch (error) {
+    await sendDiscordMessage({
+      title: "Error Updating Quote",
+      statusCode: 500,
+      message: `<@336794456063737857> An error occurred while updating the quote.\n\n**Error:** ${error.message}`,
+      channelId: "1345967280605102120",
+    });
+
+    res.status(500).json({ error: "Internal server error." });
+  }
+};
 
 exports.receiveEstimateGhl = async (req, res) => {
   try {
@@ -114,34 +230,4 @@ exports.receiveEstimateGhl = async (req, res) => {
         error.message || "An error occurred while processing the estimate.",
     });
   }
-};
-
-exports.testConnectivity = async (req, res) => {
-  try {
-    // Make a GET request to the logRequest endpoint using Axios
-    const response = await axios.get(
-      "https://6eec-111-125-104-254.ngrok-free.app/whmcs/logRequest"
-    );
-
-    // Send back the response data from the logRequest endpoint
-    res.send(
-      `Response from logRequest endpoint: ${JSON.stringify(response.data)}`
-    );
-  } catch (error) {
-    // Handle errors and return an error response
-    res.status(500).send(`Error: ${error.message}`);
-  }
-};
-
-// controllers/ipController.js
-exports.logRequest = (req, res, next) => {
-  // Extract the IP address from headers or connection
-  const ip = req.headers["x-forwarded-for"] || req.connection.remoteAddress;
-  console.log("Incoming request from IP:", ip);
-
-  // Optionally attach the IP to the request for further use
-  req.loggedIP = ip;
-
-  // Call next() to proceed to the next middleware/controller
-  next();
 };

@@ -2,13 +2,12 @@ const express = require("express");
 const router = express.Router();
 const {
   receiveEstimateGhl,
-  testConnectivity,
-  logRequest,
+  acceptquotewhmcs,
+  markQuoteAsDead,
 } = require("../controller/Whmcs");
 
-// Define route for estimate processing
 router.post("/receiveEstimateGhl", receiveEstimateGhl);
-router.get("/testconnectivity", testConnectivity);
-router.get("/logRequest", logRequest);
+router.post("/acceptquotewhmcs", acceptquotewhmcs);
+router.post("/markQuoteAsDead", markQuoteAsDead);
 
 module.exports = router;
