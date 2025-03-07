@@ -1,4 +1,4 @@
-// controllers/whmcsController.js
+const QuoteModel = require("../dynamodb/model/Quote");
 const {
   getClientDetails,
 } = require("../services/whmcsService/whmcsClientService");
@@ -82,6 +82,21 @@ exports.receiveEstimateGhl = async (req, res) => {
 
     const quoteResponse = await createQuote(quoteParams);
     console.log("WHMCS Quote API response:", quoteResponse);
+
+    if (quoteResponse.result === "success") {
+      const newQuote = new QuoteModel({
+        estimateUrl: estimateUrl,
+
+        userName: `${req.body.first_name || ""} ${
+          req.body.last_name || ""
+        }`.trim(),
+        userEmail: req.body.email,
+        quoteId: quoteResponse.quoteid,
+      });
+      await newQuote.save();
+      console.log("Quote data saved to DynamoDB");
+    }
+
     return res.status(200).json({
       message:
         "Client details obtained, estimate received, and quote created successfully!",
