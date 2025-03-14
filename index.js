@@ -20,6 +20,7 @@ const instantlyRoute = require("./routes/instantly");
 const openaiRoute = require("./routes/openai");
 const itemRoutes = require("./routes/itemTest");
 const Whmcs = require("./routes/Whmcs");
+const googlesheet = require("./routes/googlesheet");
 
 const fetchConversations = require("./cron/cron");
 
@@ -32,7 +33,8 @@ app.use("/ghlMCRoute", ghlMc);
 app.use("/instantly", instantlyRoute);
 app.use("/openai", openaiRoute);
 app.use("/itemdynamo", itemRoutes);
-app.use("/whmcs", Whmcs); // 🔥 Correctly includes WHMCS routes
+app.use("/whmcs", Whmcs);
+app.use("/googlesheet", googlesheet);
 
 // Health check route
 app.get("/health", (req, res) => {
