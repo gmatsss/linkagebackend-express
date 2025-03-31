@@ -47,6 +47,18 @@ const fetchConversations = async () => {
 
     const response = await axios.get(baseUrl, { params });
 
+    if (!response.data || !Array.isArray(response.data.conversations)) {
+      console.error(
+        "❌ Invalid response structure from Pages API:",
+        response.data
+      );
+      throw new Error(
+        `Unexpected Pages API response structure: ${JSON.stringify(
+          response.data
+        )}`
+      );
+    }
+
     const interestedData = response.data.conversations
       .filter((conversation) =>
         conversation.tag_histories?.some(
@@ -112,6 +124,11 @@ const fetchConversations = async () => {
           });
         }
       } catch (checkError) {
+        console.error("❌ GHL check failed:", {
+          data,
+          error: checkError.response?.data || checkError.message,
+        });
+
         postResults.push({
           data,
           status: "Failed during GHL check",
@@ -147,18 +164,24 @@ const fetchConversations = async () => {
 
     return { success: true, postedToZapier: zapierPosted };
   } catch (error) {
+    console.error("❌ Cron job failed:", {
+      message: error.message,
+      stack: error.stack,
+      response: error.response?.data,
+    });
+
     await sendDiscordMessage({
       title,
       statusCode: 500,
       message: `❌ Fetch Conversations Failed\nError: ${
-        error.response ? error.response.data : error.message
+        error.response ? JSON.stringify(error.response.data) : error.message
       }`,
       channelId: discordChannelId,
     });
 
     throw new Error(
       `Failed to process cron job: ${
-        error.response ? error.response.data : error.message
+        error.response ? JSON.stringify(error.response.data) : error.message
       }`
     );
   }
