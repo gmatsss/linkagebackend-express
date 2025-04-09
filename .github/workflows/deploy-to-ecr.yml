@@ -106,6 +106,14 @@ jobs:
                     "name": "WHMCS_API_SECRET",
                     "value": "${{ secrets.WHMCS_API_SECRET }}"
                   },
+                      {
+                    "name": "WP_ADMIN_USERNAME",
+                    "value": "${{ secrets.WP_ADMIN_USERNAME }}"
+                  },
+                  {
+                    "name": "WP_ADMIN_PASSWORD",
+                    "value": "${{ secrets.WP_ADMIN_PASSWORD }}"
+                  },
                   {
                     "name": "AWS_SECRET_ACCESS_KEY",
                     "value": "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
