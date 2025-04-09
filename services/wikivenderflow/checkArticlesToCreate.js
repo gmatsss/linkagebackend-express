@@ -80,14 +80,21 @@ const checkArticlesToCreate = async (scrapedData, wpArticles) => {
               channelId,
             });
           } catch (error) {
-            const errorMsg = error.response?.data || error.message;
+            let errorMsg = "";
+
+            if (error.response?.data) {
+              errorMsg = JSON.stringify(error.response.data, null, 2);
+            } else {
+              errorMsg = error.message;
+            }
+
             console.error(`[✗] Failed to create: ${titleToCreate}`);
             console.error(errorMsg);
 
             await sendDiscordMessage({
               title: "❌ Failed to Create Article",
               statusCode: 500,
-              message: `${userMention}\n**Title:** ${titleToCreate}\n**Category:** ${category.category}\n**Subcategory:** ${subCategory.subCategory}\n**Error:** ${errorMsg}`,
+              message: `${userMention}\n**Title:** ${titleToCreate}\n**Category:** ${category.category}\n**Subcategory:** ${subCategory.subCategory}\n**Error:**\n\`\`\`json\n${errorMsg}\n\`\`\``,
               channelId,
             });
           }

@@ -54,14 +54,9 @@ const scrapeWikiVenderFlow = async () => {
       return categories;
     });
 
-    console.log("Main categories found:", mainCategories);
-
     let finalResults = [];
 
     for (const mainCat of mainCategories) {
-      console.log(
-        `\nProcessing main category: "${mainCat.title}" | URL: ${mainCat.url}`
-      );
       const catPage = await browser.newPage();
       catPage.setDefaultNavigationTimeout(1800000);
       catPage.setDefaultTimeout(1800000);
@@ -91,15 +86,9 @@ const scrapeWikiVenderFlow = async () => {
           .filter(Boolean);
       });
 
-      console.log(
-        `Sub-categories found for "${mainCat.title}":`,
-        subCategories
-      );
-
       let subResults = [];
 
       for (const subCat of subCategories) {
-        console.log(`\n--> Processing sub-category: "${subCat.title}"`);
         const subPage = await browser.newPage();
         subPage.setDefaultNavigationTimeout(1800000);
         subPage.setDefaultTimeout(1800000);
@@ -114,11 +103,7 @@ const scrapeWikiVenderFlow = async () => {
             .waitForSelector("section.article-list.c-list", {
               timeout: 1800000,
             })
-            .catch(() => {
-              console.log(
-                `No articles found on page: ${currentUrl} for sub-category: ${subCat.title}`
-              );
-            });
+            .catch(() => {});
 
           await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -153,9 +138,7 @@ const scrapeWikiVenderFlow = async () => {
           await articlePage.goto(article.url, { waitUntil: "networkidle2" });
           await articlePage
             .waitForSelector("h2.heading", { timeout: 1800000 })
-            .catch(() => {
-              console.log(`Article title not found for ${article.url}`);
-            });
+            .catch(() => {});
 
           const articleData = await articlePage.evaluate(() => {
             const titleEl = document.querySelector("h2.heading");
@@ -183,14 +166,6 @@ const scrapeWikiVenderFlow = async () => {
               content: htmlContent,
             };
           });
-
-          console.log(
-            `[CATEGORY: ${categoryTitle || mainCat.title}] [SUBCATEGORY: ${
-              subCat.title
-            }] [TITLE: ${articleData.title}] [DATE: ${
-              articleData.modifiedDate
-            }]`
-          );
 
           await sendDiscordMessage({
             title: `✅ Article Scraped`,
@@ -231,16 +206,6 @@ const scrapeWikiVenderFlow = async () => {
         }** is fully scraped.`,
         channelId,
       });
-
-      //   const currentCategory = (categoryTitle || mainCat.title)
-      //     .trim()
-      //     .toLowerCase();
-      //   if (currentCategory.includes("reputation & review management")) {
-      //     console.log(
-      //       "Found 'reputation & review management' category. Stopping further scraping."
-      //     );
-      //     break;
-      //   }
     }
 
     await browser.close();
@@ -489,4 +454,5 @@ const scrapeWikiVenderFlow = async () => {
 //       throw new Error(err.message);
 //     }
 //   };
+
 module.exports = scrapeWikiVenderFlow;
