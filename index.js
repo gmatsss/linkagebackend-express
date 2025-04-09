@@ -60,15 +60,21 @@ cron.schedule("0 * * * *", async () => {
 });
 
 // Daily scrape cron job at 9:00 AM
-cron.schedule("0 9 * * *", async () => {
-  try {
-    const response = await axios.get(
-      "http://express-alb-531989323.us-east-1.elb.amazonaws.com/wikivenderflow/getwiki"
-    );
-  } catch (error) {
-    console.error("❌ Error running daily scrape cron:", error.message);
+cron.schedule(
+  "0 1 * * *", // 1 AM UTC = 9 AM Manila (UTC+8)
+  async () => {
+    try {
+      const response = await axios.get(
+        "http://express-alb-531989323.us-east-1.elb.amazonaws.com/wikivenderflow/getwiki"
+      );
+    } catch (error) {
+      console.error("❌ Error running daily scrape cron:", error.message);
+    }
+  },
+  {
+    timezone: "Asia/Manila", // optional if server timezone is UTC
   }
-});
+);
 
 // Start server
 app.listen(PORT, "0.0.0.0", () => {
