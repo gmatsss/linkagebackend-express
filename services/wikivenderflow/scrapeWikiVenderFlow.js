@@ -6,6 +6,8 @@ const userMention = "<@336794456063737857>";
 
 const scrapeWikiVenderFlow = async () => {
   let browser;
+  const visitedArticleUrls = new Set(); // <-- track scraped articles
+
   try {
     browser = await puppeteer.launch({
       headless: true,
@@ -132,6 +134,15 @@ const scrapeWikiVenderFlow = async () => {
 
         let articleDetails = [];
         for (const article of allArticles) {
+          if (visitedArticleUrls.has(article.url)) continue;
+          visitedArticleUrls.add(article.url);
+
+          console.log(
+            `[SCRAPING] ${categoryTitle || mainCat.title} > ${subCat.title} > ${
+              article.title
+            }`
+          );
+
           const articlePage = await browser.newPage();
           articlePage.setDefaultNavigationTimeout(1800000);
           articlePage.setDefaultTimeout(1800000);
@@ -221,6 +232,8 @@ const scrapeWikiVenderFlow = async () => {
     throw new Error(err.message);
   }
 };
+
+module.exports = scrapeWikiVenderFlow;
 
 // const scrapeWikiVenderFlow = async () => {
 //     let browser;
