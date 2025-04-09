@@ -20,10 +20,12 @@ const openaiRoute = require("./routes/openai");
 const itemRoutes = require("./routes/itemTest");
 const Whmcs = require("./routes/Whmcs");
 const googlesheet = require("./routes/googlesheet");
+const wikivenderflowRoute = require("./routes/wikivenderflow");
 
 const fetchConversations = require("./cron/cron");
 
 // API routes
+app.use("/wikivenderflow", wikivenderflowRoute);
 app.use("/discordnotif", discordnotifRoute);
 app.use("/test", helloRoute);
 app.use("/woo", woocomerceRoute);

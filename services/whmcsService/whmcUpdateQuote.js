@@ -20,7 +20,7 @@ const findQuote = async (userEmail, estimateUrl) => {
       return null;
     }
 
-    return quotes[0]; // Return the first matched quote
+    return quotes[0];
   } catch (error) {
     await sendDiscordMessage({
       title: "DynamoDB Search Error",
