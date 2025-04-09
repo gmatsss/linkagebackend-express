@@ -232,15 +232,15 @@ const scrapeWikiVenderFlow = async () => {
         channelId,
       });
 
-      const currentCategory = (categoryTitle || mainCat.title)
-        .trim()
-        .toLowerCase();
-      if (currentCategory.includes("reputation & review management")) {
-        console.log(
-          "Found 'reputation & review management' category. Stopping further scraping."
-        );
-        break;
-      }
+      //   const currentCategory = (categoryTitle || mainCat.title)
+      //     .trim()
+      //     .toLowerCase();
+      //   if (currentCategory.includes("reputation & review management")) {
+      //     console.log(
+      //       "Found 'reputation & review management' category. Stopping further scraping."
+      //     );
+      //     break;
+      //   }
     }
 
     await browser.close();

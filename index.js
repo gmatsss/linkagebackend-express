@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const cron = require("node-cron");
+const axios = require("axios");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -56,6 +57,17 @@ app.use((req, res) => {
 cron.schedule("0 * * * *", async () => {
   console.log("Running cron job to fetch conversations...");
   await fetchConversations();
+});
+
+// Daily scrape cron job at 9:00 AM
+cron.schedule("0 9 * * *", async () => {
+  try {
+    const response = await axios.get(
+      "http://express-alb-531989323.us-east-1.elb.amazonaws.com/wikivenderflow/getwiki"
+    );
+  } catch (error) {
+    console.error("❌ Error running daily scrape cron:", error.message);
+  }
 });
 
 // Start server
