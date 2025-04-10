@@ -1,5 +1,8 @@
 const axios = require("axios");
-const scrapeWikiVenderFlow = require("../services/wikivenderflow/scrapeWikiVenderFlow");
+const {
+  scrapeWikiVenderFlow,
+} = require("../services/wikivenderflow/scrapeWikiVenderFlow");
+
 const checkArticlesToUpdate = require("../services/wikivenderflow/checkArticlesToUpdate");
 const checkArticlesToCreate = require("../services/wikivenderflow/checkArticlesToCreate");
 
