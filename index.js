@@ -53,14 +53,14 @@ app.use((req, res) => {
   res.status(404).send({ error: "Route not found" });
 });
 
-// Cron job
+// In your main app file
 cron.schedule("0 * * * *", async () => {
   console.log("Running cron job to fetch conversations...");
   await fetchConversations();
 });
 
 cron.schedule(
-  "0 1 * * *", // Runs once a day at 1:00 AM UTC (9:00 AM Manila)
+  "0 1 * * *",
   async () => {
     try {
       const result = await processScrapeWorkflow();
@@ -69,9 +69,7 @@ cron.schedule(
       console.error("❌ Error running daily scrape cron:", error.message);
     }
   },
-  {
-    timezone: "Asia/Manila",
-  }
+  { timezone: "Asia/Manila" }
 );
 
 // Start server

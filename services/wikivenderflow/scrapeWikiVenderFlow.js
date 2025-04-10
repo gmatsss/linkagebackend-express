@@ -21,19 +21,18 @@ const normalizeTitle = (title) => {
 const scrapeWikiVenderFlow = async function* () {
   let browser;
   const batchBoundariesRaw = [
-    "funnels & websites", // Batch 1
-    "surveys, forms & chat", // Batch 2
-    "whatsapp integration", // Batch 3
-    "conversations tab", // Batch 4
-    "e-commerce", // Batch 5
-    "subscription products", // Batch 6
+    "funnels & websites",
+    "surveys, forms & chat",
+    "whatsapp integration",
+    "conversations tab",
+    "e-commerce",
+    "subscription products",
   ];
   const batchBoundaries = batchBoundariesRaw.map(normalizeTitle);
   let currentBatchIndex = 0;
   let finalResults = [];
 
   try {
-    // Updated browser initialization
     browser = await puppeteer.launch({
       headless: true,
       args: [
@@ -43,11 +42,10 @@ const scrapeWikiVenderFlow = async function* () {
         "--disable-gpu",
       ],
       executablePath:
-        process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium",
+        process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/google-chrome",
       protocolTimeout: 180000,
     });
 
-    // Create new page and set up error handlers and user agent
     const page = await browser.newPage();
     page.on("error", (err) => console.error("Page error:", err));
     page.on("pageerror", (pageErr) =>
@@ -63,7 +61,6 @@ const scrapeWikiVenderFlow = async function* () {
     await page.goto("https://help.leadconnectorhq.com/support/solutions", {
       waitUntil: "networkidle2",
     });
-
     const mainCategories = await page.evaluate(() => {
       const nodes = document.querySelectorAll("div.cs-s");
       let cats = [];
