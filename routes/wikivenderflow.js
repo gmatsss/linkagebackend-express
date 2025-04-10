@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const { getScrapeAndWpartcile } = require("../controller/wikivenderflow");
+const wikivenderflowController = require("../controller/wikivenderflow");
 
-router.get("/getwiki", getScrapeAndWpartcile);
+// Define the route using the exported function
+router.get("/getwiki", wikivenderflowController.getScrapeAndWpartcile);
 
 module.exports = router;

@@ -37,37 +37,32 @@ const parseDate = (dateStr) => {
 
 const checkArticlesToUpdate = async (scrapedData, wpArticles) => {
   const articlesNeedToUpdate = [];
+  let totalArticlesCount = 0;
+  let updateCount = 0;
+  const errors = [];
 
   for (const category of scrapedData) {
     for (const subCategory of category.subCategories || []) {
       for (const article of subCategory.articles || []) {
+        totalArticlesCount++;
         const normalizedScrapedTitle = normalizeTitle(article.title);
         const matchingWP = wpArticles.find(
           (wp) => normalizeTitle(wp.title) === normalizedScrapedTitle
         );
-
         if (matchingWP) {
           const scrapedModifiedDate = parseDate(article.modifiedDate);
           const wpPublishedDate = parseDate(matchingWP.date);
           const wpModifiedDate = parseDate(matchingWP.modified_date);
-
           const latestWPDate = [wpPublishedDate, wpModifiedDate]
             .filter(Boolean)
             .sort((a, b) => b - a)[0];
-
           const shouldUpdate =
             scrapedModifiedDate &&
             latestWPDate &&
             scrapedModifiedDate > latestWPDate;
-
           if (shouldUpdate) {
-            const wpCategoryName = matchingWP.categories?.[0]?.name || null;
-            const wpSubCategoryName =
-              matchingWP.categories?.[1]?.name || wpCategoryName;
-
-            const titleToUpdate = getReadableTitle(article.title);
+            const titleToUpdate = matchingWP.title;
             const contentToUpdate = article.content;
-
             try {
               await axios.post(
                 "https://wiki.venderflow.com/wp-json/custom/v1/update-kb",
@@ -80,39 +75,19 @@ const checkArticlesToUpdate = async (scrapedData, wpArticles) => {
                     username: process.env.WP_ADMIN_USERNAME,
                     password: process.env.WP_ADMIN_PASSWORD,
                   },
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
+                  headers: { "Content-Type": "application/json" },
                 }
               );
-
-              console.log(`[✓] Updated: ${titleToUpdate}`);
-              await sendDiscordMessage({
-                title: "🔄 Article Updated",
-                statusCode: 200,
-                message: `**Title:** ${titleToUpdate}\n**Category:** ${category.category}\n**Subcategory:** ${subCategory.subCategory}`,
-                channelId,
-              });
+              updateCount++;
             } catch (error) {
               let errorMsg = "";
-
               if (error.response?.data) {
                 errorMsg = JSON.stringify(error.response.data, null, 2);
               } else {
                 errorMsg = error.message;
               }
-
-              console.error(`[✗] Failed to update: ${titleToUpdate}`);
-              console.error(errorMsg);
-
-              await sendDiscordMessage({
-                title: "❌ Failed to Update Article",
-                statusCode: 500,
-                message: `${userMention}\n**Title:** ${titleToUpdate}\n**Category:** ${category.category}\n**Subcategory:** ${subCategory.subCategory}\n**Error:**\n\`\`\`json\n${errorMsg}\n\`\`\``,
-                channelId,
-              });
+              errors.push(`Failed to update ${titleToUpdate}: ${errorMsg}`);
             }
-
             articlesNeedToUpdate.push({
               title: titleToUpdate,
               category: category.category,
@@ -121,8 +96,10 @@ const checkArticlesToUpdate = async (scrapedData, wpArticles) => {
                 date: matchingWP.date,
                 modified_date: matchingWP.modified_date,
                 content: matchingWP.content,
-                category: wpCategoryName,
-                subCategory: wpSubCategoryName,
+                category: matchingWP.categories?.[0]?.name || null,
+                subCategory:
+                  matchingWP.categories?.[1]?.name ||
+                  matchingWP.categories?.[0]?.name,
               },
               scraped: {
                 date: article.modifiedDate,
@@ -133,6 +110,26 @@ const checkArticlesToUpdate = async (scrapedData, wpArticles) => {
         }
       }
     }
+  }
+
+  let summaryMessage = "";
+  if (totalArticlesCount > 0 && updateCount === 0) {
+    summaryMessage = `All ${totalArticlesCount} articles in this batch are already up-to-date.`;
+  } else if (totalArticlesCount > 0) {
+    summaryMessage = `${updateCount} out of ${totalArticlesCount} articles in this batch were updated.`;
+    if (errors.length > 0) {
+      summaryMessage += ` There were ${errors.length} error(s):\n${errors.join(
+        "\n"
+      )}`;
+    }
+  }
+  if (totalArticlesCount > 0) {
+    await sendDiscordMessage({
+      title: "Batch Summary",
+      statusCode: 200,
+      message: summaryMessage,
+      channelId,
+    });
   }
 
   return articlesNeedToUpdate;

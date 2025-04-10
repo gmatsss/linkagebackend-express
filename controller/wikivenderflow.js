@@ -3,10 +3,9 @@ const scrapeWikiVenderFlow = require("../services/wikivenderflow/scrapeWikiVende
 const checkArticlesToUpdate = require("../services/wikivenderflow/checkArticlesToUpdate");
 const checkArticlesToCreate = require("../services/wikivenderflow/checkArticlesToCreate");
 
-exports.getScrapeAndWpartcile = async (req, res) => {
+async function processScrapeWorkflow() {
   try {
-    const scrapedData = await scrapeWikiVenderFlow();
-
+    // Fetch WP articles once (assumed to be a small list)
     const wpResponse = await axios.get(
       "https://wiki.venderflow.com/wp-json/custom/v1/get-hkbs",
       {
@@ -16,20 +15,54 @@ exports.getScrapeAndWpartcile = async (req, res) => {
         },
       }
     );
-
     const wpArticles = wpResponse.data;
-    const articleneedtoupdate = await checkArticlesToUpdate(
-      scrapedData,
-      wpArticles
-    );
-    const newDataForWp = await checkArticlesToCreate(scrapedData, wpArticles);
 
-    res.json({
-      articleneedtoupdate,
-      newDataForWp,
-    });
+    let aggregatedArticlesToUpdate = [];
+    let aggregatedNewDataForWp = [];
+
+    // Iterate over each batch yielded by the scraper generator
+    for await (const batch of scrapeWikiVenderFlow()) {
+      console.log("Processing a new batch with", batch.length, "categories.");
+
+      const articleneedtoupdateBatch = await checkArticlesToUpdate(
+        batch,
+        wpArticles
+      );
+      const newDataForWpBatch = await checkArticlesToCreate(batch, wpArticles);
+
+      aggregatedArticlesToUpdate = aggregatedArticlesToUpdate.concat(
+        articleneedtoupdateBatch
+      );
+      aggregatedNewDataForWp = aggregatedNewDataForWp.concat(newDataForWpBatch);
+
+      console.log("Batch processed:", {
+        updates: articleneedtoupdateBatch.length,
+        newArticles: newDataForWpBatch.length,
+      });
+    }
+
+    return {
+      articleneedtoupdate: aggregatedArticlesToUpdate,
+      newDataForWp: aggregatedNewDataForWp,
+    };
+  } catch (err) {
+    console.error("Error in processScrapeWorkflow:", err);
+    throw new Error(err.message);
+  }
+}
+
+const getScrapeAndWpartcile = async (req, res) => {
+  try {
+    const result = await processScrapeWorkflow();
+    res.json(result);
   } catch (err) {
     console.error("Error in getScrapeAndWpartcile:", err);
     res.status(500).json({ error: err.message });
   }
+};
+
+// Export both functions in one object.
+module.exports = {
+  getScrapeAndWpartcile,
+  processScrapeWorkflow,
 };

@@ -7,15 +7,20 @@ const userMention = "<@336794456063737857>";
 
 const normalizeTitle = (title) => {
   if (!title) return "";
-  return he
-    .decode(title)
-    .replace(/\n|&nbsp;|\u00A0/g, " ")
-    .replace(/[–—−]/g, "-")
-    .replace(/leadconnector/gi, "venderflow")
-    .replace(/\bprint\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
+  return (
+    he
+      .decode(title)
+      .replace(/\n|&nbsp;|\u00A0/g, " ")
+      .replace(/[–—−]/g, "-")
+      // Standardize all quotes (straight and curly) to a single straight quote.
+      .replace(/['"]/g, "'")
+      .replace(/[‘’]/g, "'")
+      .replace(/leadconnector/gi, "venderflow")
+      .replace(/\bprint\b/gi, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase()
+  );
 };
 
 const getReadableTitle = (title) => {
@@ -30,14 +35,22 @@ const getReadableTitle = (title) => {
 
 const checkArticlesToCreate = async (scrapedData, wpArticles) => {
   const createdArticles = [];
+  let totalArticlesCount = 0;
+  let alreadyExistsCount = 0;
 
   for (const category of scrapedData) {
     for (const subCategory of category.subCategories || []) {
       for (const article of subCategory.articles || []) {
+        totalArticlesCount++;
         const normalizedScrapedTitle = normalizeTitle(article.title);
         const matchingWP = wpArticles.find(
           (wp) => normalizeTitle(wp.title) === normalizedScrapedTitle
         );
+
+        if (matchingWP) {
+          alreadyExistsCount++;
+          // No individual Discord message is sent here.
+        }
 
         if (!matchingWP) {
           const titleToCreate = getReadableTitle(article.title);
@@ -64,14 +77,9 @@ const checkArticlesToCreate = async (scrapedData, wpArticles) => {
                   username: process.env.WP_ADMIN_USERNAME,
                   password: process.env.WP_ADMIN_PASSWORD,
                 },
-                headers: {
-                  "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
               }
             );
-
-            console.log(`[+] Created: ${titleToCreate}`);
-            createdArticles.push(titleToCreate);
 
             await sendDiscordMessage({
               title: "🆕 Article Created",
@@ -79,18 +87,14 @@ const checkArticlesToCreate = async (scrapedData, wpArticles) => {
               message: `**Title:** ${titleToCreate}\n**Category:** ${category.category}\n**Subcategory:** ${subCategory.subCategory}`,
               channelId,
             });
+            createdArticles.push(titleToCreate);
           } catch (error) {
             let errorMsg = "";
-
             if (error.response?.data) {
               errorMsg = JSON.stringify(error.response.data, null, 2);
             } else {
               errorMsg = error.message;
             }
-
-            console.error(`[✗] Failed to create: ${titleToCreate}`);
-            console.error(errorMsg);
-
             await sendDiscordMessage({
               title: "❌ Failed to Create Article",
               statusCode: 500,
@@ -101,6 +105,22 @@ const checkArticlesToCreate = async (scrapedData, wpArticles) => {
         }
       }
     }
+  }
+
+  if (totalArticlesCount > 0 && createdArticles.length === 0) {
+    await sendDiscordMessage({
+      title: "Batch Summary",
+      statusCode: 200,
+      message: `All ${totalArticlesCount} articles in this batch already exist on the wiki.`,
+      channelId,
+    });
+  } else if (totalArticlesCount > 0) {
+    await sendDiscordMessage({
+      title: "Batch Summary",
+      statusCode: 200,
+      message: `${alreadyExistsCount} out of ${totalArticlesCount} articles in this batch already exist on the wiki.\nCreated ${createdArticles.length} new article(s).`,
+      channelId,
+    });
   }
 
   return createdArticles;
