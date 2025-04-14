@@ -24,6 +24,10 @@ const googlesheet = require("./routes/googlesheet");
 const wikivenderflowRoute = require("./routes/wikivenderflow");
 
 const fetchConversations = require("./cron/cron");
+const {
+  processScrapeWorkflow,
+  processScrapeWorkflowconvotab,
+} = require("./controller/wikivenderflow");
 
 // API routes
 app.use("/wikivenderflow", wikivenderflowRoute);
@@ -59,18 +63,23 @@ cron.schedule("0 * * * *", async () => {
   await fetchConversations();
 });
 
-cron.schedule(
-  "0 1 * * *",
-  async () => {
-    try {
-      const result = await processScrapeWorkflow();
-      console.log("Daily scrape cron job completed:", result);
-    } catch (error) {
-      console.error("❌ Error running daily scrape cron:", error.message);
-    }
-  },
-  { timezone: "Asia/Manila" }
-);
+cron.schedule("0 12 * * *", async () => {
+  console.log("🕕 Running daily scrape part 1 wiki");
+  try {
+    const result = await processScrapeWorkflow();
+  } catch (error) {
+    console.error("❌ Error running daily scrape cron:", error.message);
+  }
+});
+
+cron.schedule("0 18 * * *", async () => {
+  console.log("🕕 Running daily scrape part 2 wiki");
+  try {
+    const result = await processScrapeWorkflowconvotab();
+  } catch (error) {
+    console.error("❌ Error running daily scrape cron:", error.message);
+  }
+});
 
 // Start server
 app.listen(PORT, "0.0.0.0", () => {
