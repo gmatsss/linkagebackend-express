@@ -115,6 +115,10 @@ jobs:
                     "value": "${{ secrets.WP_ADMIN_PASSWORD }}"
                   },
                   {
+                    "name": "MONDAY_API",
+                    "value": "${{ secrets.MONDAY_API }}"
+                  },
+                  {
                     "name": "AWS_SECRET_ACCESS_KEY",
                     "value": "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
                   }
