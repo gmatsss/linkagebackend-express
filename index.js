@@ -22,6 +22,7 @@ const itemRoutes = require("./routes/itemTest");
 const Whmcs = require("./routes/Whmcs");
 const googlesheet = require("./routes/googlesheet");
 const wikivenderflowRoute = require("./routes/wikivenderflow");
+const supportvenderflow = require("./routes/supportVenderflow");
 
 const fetchConversations = require("./cron/cron");
 const {
@@ -41,6 +42,7 @@ app.use("/openai", openaiRoute);
 app.use("/itemdynamo", itemRoutes);
 app.use("/whmcs", Whmcs);
 app.use("/googlesheet", googlesheet);
+app.use("/supportvenderflow", supportvenderflow);
 
 // Health check route
 app.get("/health", (req, res) => {
