@@ -119,6 +119,10 @@ jobs:
                     "value": "${{ secrets.MONDAY_API }}"
                   },
                   {
+                    "name": "GHL_VENDERFLOW",
+                    "value": "${{ secrets.GHL_VENDERFLOW }}"
+                  },
+                  {
                     "name": "AWS_SECRET_ACCESS_KEY",
                     "value": "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
                   }
