@@ -1,11 +1,14 @@
+// controllers/itemController.js
 const axios = require("axios");
 const { sendDiscordMessage } = require("../services/discordBotService");
+const {
+  fetchItem,
+  fetchUsersForItem,
+} = require("../services/ghlvenderflow/mondayService");
+const { getGHLUserIdByEmail } = require("../services/ghlvenderflow/ghlService");
 
-const MONDAY_API_URL = "https://api.monday.com/v2";
-const MONDAY_API_KEY = process.env.MONDAY_API;
 const WEBHOOK_URL =
   "https://services.leadconnectorhq.com/hooks/cgAQMEZGL1qQIq1fJXJ3/webhook-trigger/6c4a8498-bc12-410c-9a7b-b0c96ad33706";
-
 const DISCORD_CHANNEL_ID = "1361503079106875442";
 const DISCORD_USER_ID = "336794456063737857";
 
@@ -26,29 +29,9 @@ const columnAliases = {
 
 const getItem = async (req, res) => {
   const { id, name } = req.body;
-  let query;
 
-  if (id) {
-    query = `
-        query {
-          items(ids: [${id}]) {
-            id
-            name
-            created_at
-            updated_at
-            url
-            column_values {
-              id
-              text
-              type
-              value
-            }
-          }
-        }
-      `;
-  }
-
-  if (!query) {
+  // Check if the request includes the required id parameter.
+  if (!id) {
     return res.status(400).json({
       error:
         "You must provide either an item 'id' or 'name' as a query parameter.",
@@ -56,20 +39,8 @@ const getItem = async (req, res) => {
   }
 
   try {
-    const response = await axios.post(
-      MONDAY_API_URL,
-      { query },
-      {
-        headers: {
-          Authorization: MONDAY_API_KEY,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    const items =
-      response.data.data.items || response.data.data.items_by_column_values;
-
+    // Get the item from Monday using the service.
+    const items = await fetchItem(id);
     if (!items || items.length === 0) {
       return res
         .status(404)
@@ -80,10 +51,35 @@ const getItem = async (req, res) => {
     const columns = {};
     let statusValue = "";
 
-    item.column_values.forEach((col) => {
+    // Process each column from the Monday item.
+    for (const col of item.column_values) {
       const alias = columnAliases[col.id] || col.id;
 
-      if (col.type === "status") {
+      if (alias === "CS" && col.value) {
+        try {
+          const parsed = JSON.parse(col.value);
+          const userIds =
+            parsed?.personsAndTeams?.map((person) => person.id) || [];
+
+          if (userIds.length > 0) {
+            const users = await fetchUsersForItem(userIds);
+            if (users.length > 0) {
+              const user = users[0];
+              columns[alias] = {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+              };
+            } else {
+              columns[alias] = null;
+            }
+          } else {
+            columns[alias] = null;
+          }
+        } catch (err) {
+          columns[alias] = col.text;
+        }
+      } else if (col.type === "status") {
         columns[alias] = col.text;
         statusValue = col.text;
       } else if (col.value) {
@@ -101,8 +97,23 @@ const getItem = async (req, res) => {
       } else {
         columns[alias] = col.text || null;
       }
-    });
+    }
 
+    // Enrich the “CS” column with the GHL user id if an email is available.
+    if (columns["CS"] && columns["CS"].email) {
+      try {
+        const ghlUserId = await getGHLUserIdByEmail(columns["CS"].email);
+        columns["CS"].ghlUserId = ghlUserId;
+        console.log(
+          `Fetched GHL User ID for ${columns["CS"].email}: `,
+          ghlUserId
+        );
+      } catch (e) {
+        console.error("Failed to fetch GHL user ID:", e.message);
+      }
+    }
+
+    // Determine whether to trigger the next workflow steps based on status.
     const shouldContinue = statusValue === "In Review";
 
     const responsePayload = {
@@ -115,7 +126,6 @@ const getItem = async (req, res) => {
       try {
         await axios.post(WEBHOOK_URL, responsePayload);
         console.log("✅ Webhook sent successfully.");
-
         await sendDiscordMessage({
           title: "✅ Workflow Triggered In Review Status",
           statusCode: 200,
@@ -124,7 +134,6 @@ const getItem = async (req, res) => {
         });
       } catch (webhookErr) {
         console.error("❌ Webhook POST failed:", webhookErr.message);
-
         await sendDiscordMessage({
           title: "❌ Error Sending Webhook",
           statusCode: 500,
@@ -138,6 +147,12 @@ const getItem = async (req, res) => {
         message:
           "Board item status is 'In Review'. Pipeline moved to In Review.",
         continue: true,
+        item: {
+          subject: item.name,
+          url: item.url,
+          columns,
+          aliases: columnAliases,
+        },
       });
     } else {
       await sendDiscordMessage({
@@ -151,6 +166,12 @@ const getItem = async (req, res) => {
         success: true,
         message: "Board item status is not 'In Review'. Ending workflow.",
         continue: false,
+        item: {
+          subject: item.name,
+          url: item.url,
+          columns,
+          aliases: columnAliases,
+        },
       });
     }
   } catch (error) {
