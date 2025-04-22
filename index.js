@@ -23,6 +23,7 @@ const Whmcs = require("./routes/Whmcs");
 const googlesheet = require("./routes/googlesheet");
 const wikivenderflowRoute = require("./routes/wikivenderflow");
 const supportvenderflow = require("./routes/supportVenderflow");
+const baseRoute = require("./routes/baseRoute");
 
 const fetchConversations = require("./cron/cron");
 const {
@@ -31,6 +32,7 @@ const {
 } = require("./controller/wikivenderflow");
 
 // API routes
+app.use("/", baseRoute);
 app.use("/wikivenderflow", wikivenderflowRoute);
 app.use("/discordnotif", discordnotifRoute);
 app.use("/test", helloRoute);
@@ -47,11 +49,6 @@ app.use("/supportvenderflow", supportvenderflow);
 // Health check route
 app.get("/health", (req, res) => {
   res.status(200).send("Healthy");
-});
-
-// Base route
-app.get("/", (req, res) => {
-  res.send("Hello from Node.js Express!");
 });
 
 // 404 error handler
