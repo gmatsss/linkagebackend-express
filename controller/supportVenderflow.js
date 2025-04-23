@@ -7,6 +7,7 @@ const { getGHLUserIdByEmail } = require("../services/ghlvenderflow/ghlService");
 const {
   handleStatusWorkflow,
 } = require("../services/ghlvenderflow/statusWorkflowService");
+const axios = require("axios");
 
 const columnAliases = {
   date4: "Date",
@@ -25,6 +26,7 @@ const columnAliases = {
 
 const getItem = async (req, res) => {
   const { id } = req.body;
+
   if (!id) {
     return res.status(400).json({
       error:
@@ -41,27 +43,44 @@ const getItem = async (req, res) => {
     }
 
     const item = items[0];
+
+    // extract CS data
+    let csData = null;
+    for (const col of item.column_values) {
+      if ((columnAliases[col.id] || col.id) === "CS" && col.value) {
+        try {
+          const parsed = JSON.parse(col.value);
+          const userIds = parsed.personsAndTeams?.map((p) => p.id) || [];
+          if (userIds.length) {
+            const users = await fetchUsersForItem(userIds);
+            csData = users[0] || null;
+          }
+        } catch {
+          // ignore parsing errors
+        }
+        break;
+      }
+    }
+
+    // build columns
     const columns = {};
     let statusValue = "";
-
     for (const col of item.column_values) {
       const alias = columnAliases[col.id] || col.id;
 
-      if (alias === "CS" && col.value) {
-        try {
-          const parsed = JSON.parse(col.value);
-          const userIds = parsed?.personsAndTeams?.map((p) => p.id) || [];
-          if (userIds.length) {
-            const users = await fetchUsersForItem(userIds);
-            columns[alias] = users[0]
-              ? { id: users[0].id, name: users[0].name, email: users[0].email }
-              : null;
-          } else {
-            columns[alias] = null;
-          }
-        } catch {
-          columns[alias] = col.text;
-        }
+      if (alias === "CS" && csData) {
+        columns[alias] = {
+          id: csData.id,
+          name: csData.name,
+          email: csData.email,
+          ghlUserId: await (async () => {
+            try {
+              return await getGHLUserIdByEmail(csData.email);
+            } catch {
+              return null;
+            }
+          })(),
+        };
       } else if (col.type === "status") {
         columns[alias] = col.text;
         statusValue = col.text;
@@ -78,18 +97,9 @@ const getItem = async (req, res) => {
       }
     }
 
-    if (columns["CS"] && columns["CS"].email) {
-      try {
-        const ghlUserId = await getGHLUserIdByEmail(columns["CS"].email);
-        columns["CS"].ghlUserId = ghlUserId;
-        console.log(
-          `Fetched GHL User ID for ${columns["CS"].email}:`,
-          ghlUserId
-        );
-      } catch (e) {
-        console.error("Failed to fetch GHL user ID:", e.message);
-      }
-    }
+    // inject itemID and CSID into columns
+    columns.itemID = item.id;
+    columns.CSID = csData?.id || null;
 
     const statusResult = await handleStatusWorkflow(statusValue, item, columns);
 
@@ -105,10 +115,6 @@ const getItem = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(
-      "❌ Monday API Error:",
-      error.response?.data || error.message
-    );
     return res.status(500).json({
       success: false,
       error: "Error fetching item from Monday.com",
@@ -116,4 +122,49 @@ const getItem = async (req, res) => {
   }
 };
 
-module.exports = { getItem };
+const updateStatus = async (req, res) => {
+  const { board_id, item_id, value } = req.body;
+
+  if (!board_id || !item_id || value == null) {
+    return res.status(400).json({
+      error: "Required: board_id, item_id, value",
+    });
+  }
+
+  const columnValue = JSON.stringify({ label: value });
+  const staticColumnId = "status";
+
+  const query = `
+    mutation {
+      change_column_value(
+        board_id: ${board_id},
+        item_id: ${item_id},
+        column_id: "${staticColumnId}",
+        value: "${columnValue.replace(/"/g, '\\"')}"
+      ) {
+        id
+      }
+    }
+  `;
+
+  try {
+    const { data } = await axios.post(
+      "https://api.monday.com/v2",
+      { query },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.MONDAY_API}`,
+        },
+      }
+    );
+    return res.status(200).json(data);
+  } catch (err) {
+    return res.status(err.response?.status || 500).json({
+      error: err.message,
+      details: err.response?.data,
+    });
+  }
+};
+
+module.exports = { getItem, updateStatus };
