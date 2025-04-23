@@ -21,6 +21,27 @@ const WEBHOOK_URLS = {
 const DISCORD_CHANNEL_ID = "1361503079106875442";
 const DISCORD_USER_ID = "336794456063737857";
 
+function normalizeNotes(columns) {
+  const result = { ...columns };
+
+  // helper to extract text
+  const extract = (v) => {
+    if (!v) return ""; // null or undefined or empty
+    if (typeof v === "string")
+      // already a string
+      return v;
+    if (typeof v === "object")
+      // { text, changed_at }
+      return v.text || "";
+    return String(v); // anything else
+  };
+
+  result.Clarifications = extract(columns.Clarifications);
+  result.AdditionalNote = extract(columns.AdditionalNote);
+
+  return result;
+}
+
 async function triggerStatus({
   webhookUrl,
   emoji,
@@ -147,21 +168,22 @@ async function handleClosedStatus(item, columns) {
 }
 
 async function handleStatusWorkflow(status, item, columns) {
+  const normalizedColumns = normalizeNotes(columns);
   switch (status) {
     case "In Review":
-      return handleInReviewStatus(item, columns);
+      return handleInReviewStatus(item, normalizedColumns);
     case "Ask Review":
-      return handleAskReviewStatus(item, columns);
+      return handleAskReviewStatus(item, normalizedColumns);
     case "In Progress":
-      return handleInProgressStatus(item, columns);
+      return handleInProgressStatus(item, normalizedColumns);
     case "Awaiting CX Reply":
-      return handleAwaitingCxReplyStatus(item, columns);
+      return handleAwaitingCxReplyStatus(item, normalizedColumns);
     case "Customer Reply":
-      return handleCustomerReplyStatus(item, columns);
+      return handleCustomerReplyStatus(item, normalizedColumns);
     case "Ticket Resolved":
-      return handleTicketResolvedStatus(item, columns);
+      return handleTicketResolvedStatus(item, normalizedColumns);
     case "Closed":
-      return handleClosedStatus(item, columns);
+      return handleClosedStatus(item, normalizedColumns);
     default:
       return {
         continue: false,
