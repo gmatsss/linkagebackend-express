@@ -117,10 +117,18 @@ async function changeItemStatus({ boardId, itemId, label }) {
 
     return response.data.data.change_column_value;
   } catch (err) {
+    const statusCode = err.response?.status || 500;
+    const fullError = JSON.stringify(err, Object.getOwnPropertyNames(err), 2);
+
     await sendDiscordMessage({
       title: `❌ Update Failed`,
-      statusCode: err.response?.status || 500,
-      message: `<@${DISCORD_USER_ID}> Failed to update status:\n• Board: ${boardId}\n• Item: ${itemId}\n• Attempted Status: ${label}\n• Error: ${err.message}`,
+      statusCode,
+      message:
+        `<@${DISCORD_USER_ID}> Failed to update status:\n` +
+        `• Board: ${boardId}\n` +
+        `• Item: ${itemId}\n` +
+        `• Attempted Status: ${label}\n` +
+        `• Full Error:\n\`\`\`json\n${fullError}\n\`\`\``,
       channelId: DISCORD_CHANNEL_ID,
     });
 
