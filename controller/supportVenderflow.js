@@ -2,12 +2,12 @@
 const {
   fetchItem,
   fetchUsersForItem,
+  changeItemStatus,
 } = require("../services/ghlvenderflow/mondayService");
 const { getGHLUserIdByEmail } = require("../services/ghlvenderflow/ghlService");
 const {
   handleStatusWorkflow,
 } = require("../services/ghlvenderflow/statusWorkflowService");
-const axios = require("axios");
 
 const columnAliases = {
   date4: "Date",
@@ -123,46 +123,17 @@ const getItem = async (req, res) => {
 };
 
 const updateStatus = async (req, res) => {
-  const { board_id, item_id, value } = req.body;
-
-  if (!board_id || !item_id || value == null) {
-    return res.status(400).json({
-      error: "Required: board_id, item_id, value",
-    });
-  }
-
-  const columnValue = JSON.stringify({ label: value });
-  const staticColumnId = "status";
-
-  const query = `
-    mutation {
-      change_column_value(
-        board_id: ${board_id},
-        item_id: ${item_id},
-        column_id: "${staticColumnId}",
-        value: "${columnValue.replace(/"/g, '\\"')}"
-      ) {
-        id
-      }
-    }
-  `;
-
   try {
-    const { data } = await axios.post(
-      "https://api.monday.com/v2",
-      { query },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.MONDAY_API}`,
-        },
-      }
-    );
-    return res.status(200).json(data);
+    const { board_id, item_id, value } = req.body;
+    const boardId = board_id;
+    const itemId = item_id;
+    const label = value;
+    const result = await changeItemStatus({ boardId, itemId, label });
+    return res.status(200).json({ success: true, id: result.id });
   } catch (err) {
-    return res.status(err.response?.status || 500).json({
+    return res.status(500).json({
+      success: false,
       error: err.message,
-      details: err.response?.data,
     });
   }
 };
