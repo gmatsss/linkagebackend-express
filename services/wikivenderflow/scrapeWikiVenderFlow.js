@@ -285,7 +285,7 @@ const scrapeWikiVenderFlow = async function* () {
   const batchBoundariesRaw = [
     "conversation ai bot",
     "funnels & websites",
-    "surveys, forms & chat",
+    "surveys, forms, qr codes and quizzes",
     "whatsapp integration",
   ];
   const batchBoundaries = batchBoundariesRaw.map(normalizeTitle);
