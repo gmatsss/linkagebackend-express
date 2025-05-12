@@ -283,6 +283,7 @@ const scrapeWikiVenderFlowFromConversations = async function* () {
 const scrapeWikiVenderFlow = async function* () {
   let browser;
   const batchBoundariesRaw = [
+    "conversation ai bot",
     "funnels & websites",
     "surveys, forms & chat",
     "whatsapp integration",

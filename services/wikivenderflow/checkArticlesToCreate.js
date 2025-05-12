@@ -7,20 +7,17 @@ const userMention = "<@336794456063737857>";
 
 const normalizeTitle = (title) => {
   if (!title) return "";
-  return (
-    he
-      .decode(title)
-      .replace(/\n|&nbsp;|\u00A0/g, " ")
-      .replace(/[–—−]/g, "-")
-      // Standardize all quotes (straight and curly) to a single straight quote.
-      .replace(/['"]/g, "'")
-      .replace(/[‘’]/g, "'")
-      .replace(/leadconnector/gi, "venderflow")
-      .replace(/\bprint\b/gi, "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase()
-  );
+  return he
+    .decode(title)
+    .replace(/\n|&nbsp;|\u00A0/g, " ")
+    .replace(/[–—−]/g, "-")
+    .replace(/['"]/g, "'")
+    .replace(/[‘’]/g, "'")
+    .replace(/leadconnector/gi, "venderflow")
+    .replace(/\bprint\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 };
 
 const getReadableTitle = (title) => {

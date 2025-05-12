@@ -55,6 +55,16 @@ async function processScrapeWorkflow() {
   }
 }
 
+const getScrapeAndWpartcile = async (req, res) => {
+  try {
+    const result = await processScrapeWorkflow();
+    res.json(result);
+  } catch (err) {
+    console.error("Error in getScrapeAndWpartcile:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 async function processScrapeWorkflowconvotab() {
   try {
     // Fetch WP articles once (assumed to be a small list)
@@ -103,17 +113,6 @@ async function processScrapeWorkflowconvotab() {
   }
 }
 
-const getScrapeAndWpartcile = async (req, res) => {
-  try {
-    const result = await processScrapeWorkflow();
-    res.json(result);
-  } catch (err) {
-    console.error("Error in getScrapeAndWpartcile:", err);
-    res.status(500).json({ error: err.message });
-  }
-};
-
-//
 const getScrapeAndWpartcileconvotab = async (req, res) => {
   try {
     const result = await processScrapeWorkflowconvotab();
