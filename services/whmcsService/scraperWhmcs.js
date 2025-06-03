@@ -495,7 +495,7 @@ const scrapeEstimate = async (estimateUrl) => {
     await sendDiscordMessage({
       title: "⚠️ Scraper Error",
       statusCode: 500,
-      message: `<@336794456063737857> Error occurred while scraping: ${error.message}\n🔗 [Check Estimate](${estimateUrl})`,
+      message: `<@336794456063737857> Error occurred while scraping: ${error.message}\n🔗 [Check Estimates](${estimateUrl})`,
       channelId: DISCORD_CHANNEL_ID,
     });
     if (browser) await browser.close();
