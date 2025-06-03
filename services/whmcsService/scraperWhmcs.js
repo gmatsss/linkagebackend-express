@@ -149,90 +149,32 @@ const sendEstimateToDiscord = async (
   }
 };
 
+// scraperWhmcs.js (excerpt)
 const extractDescription = async (page) => {
+  // 1. Ensure the .estimate-preview-desc container is present
+  try {
+    await page.waitForSelector(".estimate-preview-desc", { timeout: 15000 });
+  } catch {
+    return null;
+  }
+
+  // 2. In the page context, grab all <p> inside that container
   return await page.evaluate(() => {
-    console.log("=== DESCRIPTION EXTRACTION DEBUG ===");
+    const descDiv = document.querySelector(".estimate-preview-desc");
+    if (!descDiv) return null;
 
-    // Based on your HTML, let's try more specific selectors
-    const selectors = [
-      "div.pt-1.text-sm.text-gray-400.break-words.hyphens-auto.estimate-preview-desc",
-      ".estimate-preview-desc",
-      '[class*="estimate-preview-desc"]',
-      'div[class*="pt-1"][class*="text-sm"][class*="text-gray-400"]',
-      "div.pt-1.text-sm.text-gray-400",
-    ];
-
-    let descDiv = null;
-    let usedSelector = "";
-
-    // Try each selector
-    for (const selector of selectors) {
-      try {
-        descDiv = document.querySelector(selector);
-        if (descDiv) {
-          usedSelector = selector;
-          console.log(`Found description div with selector: ${selector}`);
-          break;
-        }
-      } catch (e) {
-        console.log(`Selector failed: ${selector}`, e.message);
-      }
+    // Gather all paragraph text
+    const paras = Array.from(descDiv.querySelectorAll("p"));
+    if (paras.length) {
+      return paras
+        .map((p) => p.textContent.trim())
+        .filter((text) => text.length > 0)
+        .join("\n\n");
     }
 
-    if (!descDiv) {
-      console.log("Description div not found with any selector");
-      // Let's try to find any div that might contain the description
-      const allDivs = document.querySelectorAll("div");
-      console.log(`Total divs found: ${allDivs.length}`);
-
-      // Look for divs containing "Test" text (from your screenshot)
-      for (let div of allDivs) {
-        if (div.innerHTML && div.innerHTML.includes("<p>Test")) {
-          console.log(
-            "Found potential description div containing Test:",
-            div.outerHTML
-          );
-          descDiv = div;
-          break;
-        }
-      }
-
-      if (!descDiv) return null;
-    }
-
-    console.log("Description div class:", descDiv.className);
-    console.log("Description div HTML:", descDiv.outerHTML);
-
-    // Extract text from paragraphs
-    const paragraphs = Array.from(descDiv.querySelectorAll("p"));
-    console.log("Found paragraphs count:", paragraphs.length);
-
-    if (paragraphs.length > 0) {
-      const paragraphTexts = paragraphs
-        .map((p) => {
-          const text = p.innerText || p.textContent || "";
-          console.log("Paragraph text:", text.trim());
-          return text.trim();
-        })
-        .filter((text) => text && text.length > 0);
-
-      console.log("Filtered paragraph texts:", paragraphTexts);
-      const result =
-        paragraphTexts.length > 0 ? paragraphTexts.join("\n\n") : null;
-      console.log("Final description result:", result);
-      return result;
-    } else {
-      // If no paragraphs, try to get direct text content
-      const directText = (
-        descDiv.innerText ||
-        descDiv.textContent ||
-        ""
-      ).trim();
-      console.log("Direct text from div:", directText);
-      const result = directText && directText.length > 0 ? directText : null;
-      console.log("Final description result (direct):", result);
-      return result;
-    }
+    // If for some reason <p> tags aren’t used, fallback to entire innerText
+    const fullText = (descDiv.innerText || "").trim();
+    return fullText.length ? fullText : null;
   });
 };
 
