@@ -119,6 +119,11 @@ exports.acceptquotewhmcs = async (req, res) => {
 };
 
 exports.receiveEstimateGhl = async (req, res) => {
+  console.log(
+    "🔥 GHL webhook fired! Payload was:",
+    JSON.stringify(req.body, null, 2)
+  );
+
   try {
     let clientDetails = {};
     let clientId = null;
