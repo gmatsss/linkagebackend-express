@@ -132,19 +132,30 @@ const scrapeEstimateLocal = async (estimateUrl) => {
 
     // Extract description from the estimate-preview-desc div
     const description = await page.evaluate(() => {
-      const descDiv = document.querySelector(".estimate-preview-desc");
+      // Try multiple selectors to find the description div
+      let descDiv = document.querySelector(".estimate-preview-desc");
+      if (!descDiv) {
+        descDiv = document.querySelector(
+          "div.pt-1.text-sm.text-gray-400.break-words.hyphens-auto.estimate-preview-desc"
+        );
+      }
+      if (!descDiv) {
+        descDiv = document.querySelector("[class*='estimate-preview-desc']");
+      }
+
       if (descDiv) {
         // Get all paragraphs within the description div
         const paragraphs = Array.from(descDiv.querySelectorAll("p"));
         if (paragraphs.length > 0) {
           // Join all paragraphs with double newlines
-          return paragraphs
+          const paragraphTexts = paragraphs
             .map((p) => p.innerText.trim())
-            .filter((text) => text)
-            .join("\n\n");
+            .filter((text) => text && text.length > 0);
+          return paragraphTexts.length > 0 ? paragraphTexts.join("\n\n") : null;
         } else {
           // If no paragraphs, get the direct text content
-          return descDiv.innerText.trim();
+          const directText = descDiv.innerText.trim();
+          return directText && directText.length > 0 ? directText : null;
         }
       }
       return null;
@@ -305,19 +316,30 @@ const scrapeEstimate = async (estimateUrl) => {
 
     // Extract description from the estimate-preview-desc div
     const description = await page.evaluate(() => {
-      const descDiv = document.querySelector(".estimate-preview-desc");
+      // Try multiple selectors to find the description div
+      let descDiv = document.querySelector(".estimate-preview-desc");
+      if (!descDiv) {
+        descDiv = document.querySelector(
+          "div.pt-1.text-sm.text-gray-400.break-words.hyphens-auto.estimate-preview-desc"
+        );
+      }
+      if (!descDiv) {
+        descDiv = document.querySelector("[class*='estimate-preview-desc']");
+      }
+
       if (descDiv) {
         // Get all paragraphs within the description div
         const paragraphs = Array.from(descDiv.querySelectorAll("p"));
         if (paragraphs.length > 0) {
           // Join all paragraphs with double newlines
-          return paragraphs
+          const paragraphTexts = paragraphs
             .map((p) => p.innerText.trim())
-            .filter((text) => text)
-            .join("\n\n");
+            .filter((text) => text && text.length > 0);
+          return paragraphTexts.length > 0 ? paragraphTexts.join("\n\n") : null;
         } else {
           // If no paragraphs, get the direct text content
-          return descDiv.innerText.trim();
+          const directText = descDiv.innerText.trim();
+          return directText && directText.length > 0 ? directText : null;
         }
       }
       return null;
