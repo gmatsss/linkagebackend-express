@@ -10,6 +10,11 @@ const formatDiscordMessage = (
   metaData,
   description
 ) => {
+  console.log("=== DISCORD MESSAGE FORMATTING DEBUG ===");
+  console.log("Description received:", description);
+  console.log("Description type:", typeof description);
+  console.log("Description length:", description ? description.length : "null");
+
   const messages = [];
 
   // Header message with metadata and description
@@ -22,12 +27,24 @@ const formatDiscordMessage = (
     headerMessage += `• Expiry Date: ${metaData.expiryDate || "N/A"}\n\n`;
   }
 
-  // Add description
-  if (description && description.trim()) {
+  // Add description - let's be more lenient with the check
+  console.log("Checking description condition...");
+  if (description) {
+    console.log("Description exists, adding to message");
     headerMessage += `**📄 Description:**\n${description}\n\n`;
+  } else {
+    console.log("No description found or description is empty");
+    // Let's add a placeholder to see if this section appears
+    headerMessage += `**📄 Description:**\nNo description available\n\n`;
   }
 
   headerMessage += `**📦 Line Items (${lineItems.length}):**\n`;
+
+  console.log("Header message length:", headerMessage.length);
+  console.log(
+    "Header message preview:",
+    headerMessage.substring(0, 300) + "..."
+  );
 
   // If header is too long, split it
   if (headerMessage.length > MAX_DISCORD_MESSAGE_LENGTH) {
@@ -40,8 +57,10 @@ const formatDiscordMessage = (
         metaData.issueDate || "N/A"
       }\n• Expiry Date: ${metaData.expiryDate || "N/A"}\n\n`;
     }
-    if (description && description.trim()) {
+    if (description) {
       metaMessage += `**📄 Description:**\n${description}\n\n`;
+    } else {
+      metaMessage += `**📄 Description:**\nNo description available\n\n`;
     }
     metaMessage += `**📦 Line Items (${lineItems.length}):**\n`;
     messages.push(metaMessage);
@@ -67,6 +86,11 @@ const formatDiscordMessage = (
   if (currentMessage.trim()) {
     messages.push(currentMessage);
   }
+
+  console.log("Total messages to send:", messages.length);
+  messages.forEach((msg, index) => {
+    console.log(`Message ${index + 1} preview:`, msg.substring(0, 100) + "...");
+  });
 
   return messages;
 };
@@ -127,30 +151,57 @@ const sendEstimateToDiscord = async (
 
 const extractDescription = async (page) => {
   return await page.evaluate(() => {
-    // Multiple selector strategies to find the description
+    console.log("=== DESCRIPTION EXTRACTION DEBUG ===");
+
+    // Based on your HTML, let's try more specific selectors
     const selectors = [
-      ".estimate-preview-desc",
       "div.pt-1.text-sm.text-gray-400.break-words.hyphens-auto.estimate-preview-desc",
+      ".estimate-preview-desc",
       '[class*="estimate-preview-desc"]',
-      ".estimate-preview-desc p",
-      'div[class*="estimate-preview"] p',
+      'div[class*="pt-1"][class*="text-sm"][class*="text-gray-400"]',
+      "div.pt-1.text-sm.text-gray-400",
     ];
 
     let descDiv = null;
+    let usedSelector = "";
 
     // Try each selector
     for (const selector of selectors) {
-      descDiv = document.querySelector(selector);
-      if (descDiv) break;
+      try {
+        descDiv = document.querySelector(selector);
+        if (descDiv) {
+          usedSelector = selector;
+          console.log(`Found description div with selector: ${selector}`);
+          break;
+        }
+      } catch (e) {
+        console.log(`Selector failed: ${selector}`, e.message);
+      }
     }
 
     if (!descDiv) {
       console.log("Description div not found with any selector");
-      return null;
+      // Let's try to find any div that might contain the description
+      const allDivs = document.querySelectorAll("div");
+      console.log(`Total divs found: ${allDivs.length}`);
+
+      // Look for divs containing "Test" text (from your screenshot)
+      for (let div of allDivs) {
+        if (div.innerHTML && div.innerHTML.includes("<p>Test")) {
+          console.log(
+            "Found potential description div containing Test:",
+            div.outerHTML
+          );
+          descDiv = div;
+          break;
+        }
+      }
+
+      if (!descDiv) return null;
     }
 
-    console.log("Found description div:", descDiv.className);
-    console.log("Description div HTML:", descDiv.innerHTML);
+    console.log("Description div class:", descDiv.className);
+    console.log("Description div HTML:", descDiv.outerHTML);
 
     // Extract text from paragraphs
     const paragraphs = Array.from(descDiv.querySelectorAll("p"));
@@ -166,7 +217,10 @@ const extractDescription = async (page) => {
         .filter((text) => text && text.length > 0);
 
       console.log("Filtered paragraph texts:", paragraphTexts);
-      return paragraphTexts.length > 0 ? paragraphTexts.join("\n\n") : null;
+      const result =
+        paragraphTexts.length > 0 ? paragraphTexts.join("\n\n") : null;
+      console.log("Final description result:", result);
+      return result;
     } else {
       // If no paragraphs, try to get direct text content
       const directText = (
@@ -175,7 +229,9 @@ const extractDescription = async (page) => {
         ""
       ).trim();
       console.log("Direct text from div:", directText);
-      return directText && directText.length > 0 ? directText : null;
+      const result = directText && directText.length > 0 ? directText : null;
+      console.log("Final description result (direct):", result);
+      return result;
     }
   });
 };
@@ -495,7 +551,7 @@ const scrapeEstimate = async (estimateUrl) => {
     await sendDiscordMessage({
       title: "⚠️ Scraper Error",
       statusCode: 500,
-      message: `<@336794456063737857> Error occurred while scraping: ${error.message}\n🔗 [Check Estimates](${estimateUrl})`,
+      message: `<@336794456063737857> Error occurred while scraping: ${error.message}\n🔗 [Check Estimate](${estimateUrl})`,
       channelId: DISCORD_CHANNEL_ID,
     });
     if (browser) await browser.close();
