@@ -4,20 +4,41 @@ const { sendDiscordMessage } = require("../discordBotService");
 const DISCORD_CHANNEL_ID = "1345967280605102120";
 const MAX_DISCORD_MESSAGE_LENGTH = 2000;
 
-const sendEstimateToDiscord = async (estimateUrl, lineItems, metaData) => {
+const sendEstimateToDiscord = async (
+  estimateUrl,
+  lineItems,
+  metaData,
+  description
+) => {
   let messages = [];
   // Build the initial message header with meta data.
   let currentMessage = `**🔹 Estimate Scraped Successfully**\n🔗 [View Estimate](${estimateUrl})\n`;
   if (metaData) {
     currentMessage += `**🗓 Issue Date:** ${metaData.issueDate || "N/A"}\n`;
-    currentMessage += `**🗓 Expiry Date:** ${metaData.expiryDate || "N/A"}\n\n`;
+    currentMessage += `**🗓 Expiry Date:** ${metaData.expiryDate || "N/A"}\n`;
   }
+
+  // Add description if available
+  if (description && description.trim()) {
+    currentMessage += `**📄 Description:**\n${description}\n\n`;
+  } else {
+    currentMessage += `\n`;
+  }
+
   currentMessage += `**📌 Line Items:**\n`;
 
   lineItems.forEach((item, index) => {
-    let itemText = `**${index + 1}. ${item.productName}**\n   - 💬 ${
-      item.productDescription
-    }\n   - 💰 Price: ${item.price}\n   - 🏷️ Total: ${item.total}\n\n`;
+    let itemText = `**${index + 1}. ${item.productName}**\n`;
+    if (item.productDescription && item.productDescription !== "N/A") {
+      itemText += `   - 💬 ${item.productDescription}\n`;
+    }
+    itemText += `   - 📦 Qty: ${item.quantity || "N/A"}\n   - 💰 Price: ${
+      item.price
+    }\n`;
+    if (item.tax && item.tax !== "N/A") {
+      itemText += `   - 🏷️ Tax: ${item.tax}\n`;
+    }
+    itemText += `   - 💲 Total: ${item.total}\n\n`;
     if (currentMessage.length + itemText.length > MAX_DISCORD_MESSAGE_LENGTH) {
       messages.push(currentMessage);
       currentMessage = "";
@@ -109,6 +130,26 @@ const scrapeEstimateLocal = async (estimateUrl) => {
       return { issueDate, expiryDate };
     });
 
+    // Extract description from the estimate-preview-desc div
+    const description = await page.evaluate(() => {
+      const descDiv = document.querySelector(".estimate-preview-desc");
+      if (descDiv) {
+        // Get all paragraphs within the description div
+        const paragraphs = Array.from(descDiv.querySelectorAll("p"));
+        if (paragraphs.length > 0) {
+          // Join all paragraphs with double newlines
+          return paragraphs
+            .map((p) => p.innerText.trim())
+            .filter((text) => text)
+            .join("\n\n");
+        } else {
+          // If no paragraphs, get the direct text content
+          return descDiv.innerText.trim();
+        }
+      }
+      return null;
+    });
+
     // Try waiting for the line items selector with a shorter timeout.
     let lineItems = [];
     try {
@@ -132,6 +173,12 @@ const scrapeEstimateLocal = async (estimateUrl) => {
           return {
             productName: productName.trim(),
             productDescription,
+            quantity:
+              el
+                .querySelector(
+                  ".flex-none.w-32.py-1.whitespace-nowrap.text-sm.text-gray-500.text-center"
+                )
+                ?.innerText.trim() || "N/A",
             price:
               el
                 .querySelector(
@@ -161,12 +208,19 @@ const scrapeEstimateLocal = async (estimateUrl) => {
     }
 
     console.log(`Scraped ${lineItems.length} line items successfully.`);
+    if (description) {
+      console.log(
+        `Description found: ${description.substring(0, 100)}${
+          description.length > 100 ? "..." : ""
+        }`
+      );
+    }
 
-    // Send a Discord message with both meta data and line items.
-    await sendEstimateToDiscord(estimateUrl, lineItems, metaData);
+    // Send a Discord message with meta data, description, and line items.
+    await sendEstimateToDiscord(estimateUrl, lineItems, metaData, description);
 
-    // Return both line items and metaData for further processing.
-    return { lineItems, metaData };
+    // Return line items, metaData, and description for further processing.
+    return { lineItems, metaData, description };
   } catch (error) {
     console.error("Puppeteer Error:", error.message);
     await sendDiscordMessage({
@@ -249,6 +303,26 @@ const scrapeEstimate = async (estimateUrl) => {
       return { issueDate, expiryDate };
     });
 
+    // Extract description from the estimate-preview-desc div
+    const description = await page.evaluate(() => {
+      const descDiv = document.querySelector(".estimate-preview-desc");
+      if (descDiv) {
+        // Get all paragraphs within the description div
+        const paragraphs = Array.from(descDiv.querySelectorAll("p"));
+        if (paragraphs.length > 0) {
+          // Join all paragraphs with double newlines
+          return paragraphs
+            .map((p) => p.innerText.trim())
+            .filter((text) => text)
+            .join("\n\n");
+        } else {
+          // If no paragraphs, get the direct text content
+          return descDiv.innerText.trim();
+        }
+      }
+      return null;
+    });
+
     let lineItems = [];
     try {
       await page.waitForSelector(".flex.hover\\:bg-gray-50", {
@@ -265,6 +339,13 @@ const scrapeEstimate = async (estimateUrl) => {
                 ".flex-grow.text-sm.text-gray-600.text-left.break-word"
               )
               ?.childNodes[0]?.textContent.trim() || "N/A";
+
+          const quantity =
+            itemRow
+              ?.querySelector(
+                ".flex-none.w-32.py-1.whitespace-nowrap.text-sm.text-gray-500.text-center"
+              )
+              ?.innerText.trim() || "N/A";
 
           const price =
             itemRow
@@ -289,6 +370,7 @@ const scrapeEstimate = async (estimateUrl) => {
 
           return {
             productName,
+            quantity,
             price,
             tax,
             total,
@@ -306,9 +388,17 @@ const scrapeEstimate = async (estimateUrl) => {
     if (lineItems.length === 0)
       console.warn(`No line items found for ${estimateUrl}`);
     console.log(`Scraped ${lineItems.length} line items successfully.`);
+    if (description) {
+      console.log(
+        `Description found: ${description.substring(0, 100)}${
+          description.length > 100 ? "..." : ""
+        }`
+      );
+    }
 
     const lineItemsNoDesc = lineItems.map((item) => ({
       productName: item.productName,
+      quantity: item.quantity,
       price: item.price,
       total: item.total,
     }));
@@ -318,11 +408,13 @@ const scrapeEstimate = async (estimateUrl) => {
       statusCode: 200,
       message: `Estimate: ${estimateUrl}\nMeta Data: ${JSON.stringify(
         metaData
-      )}\nLine Items: ${JSON.stringify(lineItemsNoDesc)}`,
+      )}\nDescription: ${description || "N/A"}\nLine Items: ${JSON.stringify(
+        lineItemsNoDesc
+      )}`,
       channelId: DISCORD_CHANNEL_ID,
     });
 
-    return { lineItems, metaData };
+    return { lineItems, metaData, description };
   } catch (error) {
     console.error("Puppeteer Error:", error.message);
     await sendDiscordMessage({
