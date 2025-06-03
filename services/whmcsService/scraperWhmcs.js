@@ -17,20 +17,24 @@ const formatDiscordMessage = (
 
   const messages = [];
 
+  // Header message with metadata and description
   let headerMessage = `**🔹 Estimate Scraped Successfully**\n🔗 [View Estimate](${estimateUrl})\n\n`;
 
+  // Add metadata
   if (metaData) {
     headerMessage += `**📅 Metadata:**\n`;
     headerMessage += `• Issue Date: ${metaData.issueDate || "N/A"}\n`;
     headerMessage += `• Expiry Date: ${metaData.expiryDate || "N/A"}\n\n`;
   }
 
+  // Add description - let's be more lenient with the check
   console.log("Checking description condition...");
   if (description) {
     console.log("Description exists, adding to message");
     headerMessage += `**📄 Description:**\n${description}\n\n`;
   } else {
     console.log("No description found or description is empty");
+    // Let's add a placeholder to see if this section appears
     headerMessage += `**📄 Description:**\nNo description available\n\n`;
   }
 
@@ -42,6 +46,7 @@ const formatDiscordMessage = (
     headerMessage.substring(0, 300) + "..."
   );
 
+  // If header is too long, split it
   if (headerMessage.length > MAX_DISCORD_MESSAGE_LENGTH) {
     const basicHeader = `**🔹 Estimate Scraped Successfully**\n🔗 [View Estimate](${estimateUrl})\n\n`;
     messages.push(basicHeader);
@@ -63,6 +68,7 @@ const formatDiscordMessage = (
     messages.push(headerMessage);
   }
 
+  // Process line items
   let currentMessage = "";
   lineItems.forEach((item, index) => {
     const itemText = formatLineItem(item, index + 1);
@@ -134,6 +140,7 @@ const sendEstimateToDiscord = async (
         channelId: DISCORD_CHANNEL_ID,
       });
 
+      // Small delay between messages to avoid rate limiting
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
   } catch (error) {
@@ -142,54 +149,91 @@ const sendEstimateToDiscord = async (
   }
 };
 
-// Extract general description (Technique 1)
 const extractDescription = async (page) => {
-  try {
-    await page.waitForSelector(".estimate-preview-desc", { timeout: 15000 });
-  } catch {
-    return null;
-  }
-
   return await page.evaluate(() => {
-    const descDiv = document.querySelector(".estimate-preview-desc");
-    if (!descDiv) return null;
+    console.log("=== DESCRIPTION EXTRACTION DEBUG ===");
 
-    const paras = Array.from(descDiv.querySelectorAll("p"));
-    if (paras.length) {
-      return paras
-        .map((p) => p.textContent.trim())
-        .filter((text) => text.length > 0)
-        .join("\n\n");
+    // Based on your HTML, let's try more specific selectors
+    const selectors = [
+      "div.pt-1.text-sm.text-gray-400.break-words.hyphens-auto.estimate-preview-desc",
+      ".estimate-preview-desc",
+      '[class*="estimate-preview-desc"]',
+      'div[class*="pt-1"][class*="text-sm"][class*="text-gray-400"]',
+      "div.pt-1.text-sm.text-gray-400",
+    ];
+
+    let descDiv = null;
+    let usedSelector = "";
+
+    // Try each selector
+    for (const selector of selectors) {
+      try {
+        descDiv = document.querySelector(selector);
+        if (descDiv) {
+          usedSelector = selector;
+          console.log(`Found description div with selector: ${selector}`);
+          break;
+        }
+      } catch (e) {
+        console.log(`Selector failed: ${selector}`, e.message);
+      }
     }
 
-    const fullText = (descDiv.innerText || "").trim();
-    return fullText.length ? fullText : null;
+    if (!descDiv) {
+      console.log("Description div not found with any selector");
+      // Let's try to find any div that might contain the description
+      const allDivs = document.querySelectorAll("div");
+      console.log(`Total divs found: ${allDivs.length}`);
+
+      // Look for divs containing "Test" text (from your screenshot)
+      for (let div of allDivs) {
+        if (div.innerHTML && div.innerHTML.includes("<p>Test")) {
+          console.log(
+            "Found potential description div containing Test:",
+            div.outerHTML
+          );
+          descDiv = div;
+          break;
+        }
+      }
+
+      if (!descDiv) return null;
+    }
+
+    console.log("Description div class:", descDiv.className);
+    console.log("Description div HTML:", descDiv.outerHTML);
+
+    // Extract text from paragraphs
+    const paragraphs = Array.from(descDiv.querySelectorAll("p"));
+    console.log("Found paragraphs count:", paragraphs.length);
+
+    if (paragraphs.length > 0) {
+      const paragraphTexts = paragraphs
+        .map((p) => {
+          const text = p.innerText || p.textContent || "";
+          console.log("Paragraph text:", text.trim());
+          return text.trim();
+        })
+        .filter((text) => text && text.length > 0);
+
+      console.log("Filtered paragraph texts:", paragraphTexts);
+      const result =
+        paragraphTexts.length > 0 ? paragraphTexts.join("\n\n") : null;
+      console.log("Final description result:", result);
+      return result;
+    } else {
+      // If no paragraphs, try to get direct text content
+      const directText = (
+        descDiv.innerText ||
+        descDiv.textContent ||
+        ""
+      ).trim();
+      console.log("Direct text from div:", directText);
+      const result = directText && directText.length > 0 ? directText : null;
+      console.log("Final description result (direct):", result);
+      return result;
+    }
   });
-};
-
-// Extract item description (Technique 2) - Similar to scrapeEstimateLocal logic
-const extractItemDescription = (element) => {
-  try {
-    const fullProductText =
-      element
-        .querySelector(
-          ".flex-grow.py-1.text-sm.text-gray-600.text-left.break-word, .flex-grow.text-sm.text-gray-600.text-left.break-word"
-        )
-        ?.innerText.trim() || "";
-
-    if (!fullProductText) return "N/A";
-
-    const lines = fullProductText.split("\n");
-    if (lines.length > 1) {
-      // First line is product name, rest is description
-      return lines.slice(1).join(" ").trim() || "N/A";
-    }
-
-    return "N/A";
-  } catch (error) {
-    console.warn("Error extracting item description:", error);
-    return "N/A";
-  }
 };
 
 const scrapeEstimateLocal = async (estimateUrl) => {
@@ -228,10 +272,12 @@ const scrapeEstimateLocal = async (estimateUrl) => {
       timeout: 180000,
     });
 
+    // Wait for the meta information container
     await page.waitForSelector("div.grid.grid-cols-1.md\\:grid-cols-3.py-2", {
       timeout: 30000,
     });
 
+    // Extract meta information
     const metaData = await page.evaluate(() => {
       let issueDate = null,
         expiryDate = null;
@@ -260,16 +306,16 @@ const scrapeEstimateLocal = async (estimateUrl) => {
       return { issueDate, expiryDate };
     });
 
-    // Technique 1: Extract general description
+    // Extract description with improved logic
     const description = await extractDescription(page);
 
+    // Extract line items
     let lineItems = [];
     try {
       await page.waitForSelector(".flex.hover\\:bg-gray-50", {
         timeout: 10000,
       });
 
-      // Technique 2: Extract line items with individual descriptions
       lineItems = await page.evaluate(() => {
         return Array.from(
           document.querySelectorAll(".flex.hover\\:bg-gray-50")
@@ -332,6 +378,7 @@ const scrapeEstimateLocal = async (estimateUrl) => {
       console.log("No description found");
     }
 
+    // Send to Discord with improved formatting
     await sendEstimateToDiscord(estimateUrl, lineItems, metaData, description);
 
     return { lineItems, metaData, description };
@@ -418,7 +465,7 @@ const scrapeEstimate = async (estimateUrl) => {
       return { issueDate, expiryDate };
     });
 
-    // Technique 1: Extract general description
+    // Extract description with improved logic
     const description = await extractDescription(page);
 
     let lineItems = [];
@@ -427,68 +474,35 @@ const scrapeEstimate = async (estimateUrl) => {
         timeout: 10000,
       });
 
-      // Technique 2: Enhanced line item extraction with item descriptions
       lineItems = await page.evaluate(() => {
         const rows = Array.from(document.querySelectorAll("[index]"));
         return rows.map((row) => {
           const itemRow = row.querySelector(".flex.hover\\:bg-gray-50");
 
-          // Get full product text and split into name and description
-          const productElement = itemRow?.querySelector(
-            ".flex-grow.text-sm.text-gray-600.text-left.break-word"
-          );
-
-          let productName = "N/A";
-          let productDescription = "N/A";
-
-          if (productElement) {
-            // Try to get the first text node as product name
-            const firstTextNode = productElement.childNodes[0];
-            if (firstTextNode && firstTextNode.nodeType === Node.TEXT_NODE) {
-              productName = firstTextNode.textContent.trim();
-            }
-
-            // Get full text and extract description
-            const fullText = productElement.innerText.trim();
-            const lines = fullText.split("\n");
-            if (lines.length > 1) {
-              productDescription = lines.slice(1).join(" ").trim() || "N/A";
-            }
-
-            // Fallback: if no description found, try alternative approach
-            if (productDescription === "N/A" || !productDescription) {
-              const allText = productElement.textContent.trim();
-              if (allText.includes("\n")) {
-                const parts = allText.split("\n");
-                if (parts.length > 1) {
-                  productName = parts[0].trim();
-                  productDescription = parts.slice(1).join(" ").trim() || "N/A";
-                }
-              }
-            }
-          }
-
+          const productName =
+            itemRow
+              ?.querySelector(
+                ".flex-grow.text-sm.text-gray-600.text-left.break-word"
+              )
+              ?.childNodes[0]?.textContent.trim() || "N/A";
           const quantity =
             itemRow
               ?.querySelector(
                 ".flex-none.w-32.py-1.whitespace-nowrap.text-sm.text-gray-500.text-center"
               )
               ?.innerText.trim() || "N/A";
-
           const price =
             itemRow
               ?.querySelector(
                 ".flex-none.w-32.pl-6.py-1.whitespace-nowrap.text-sm.text-gray-500.text-right.hidden.md\\:block"
               )
               ?.innerText.trim() || "N/A";
-
           const tax =
             itemRow
               ?.querySelector(
                 ".flex-none.w-32.pr-16.py-1.whitespace-nowrap.text-sm.text-gray-500.text-left.hidden.md\\:flex"
               )
               ?.innerText.trim() || "N/A";
-
           const total =
             itemRow
               ?.querySelector(
@@ -498,7 +512,6 @@ const scrapeEstimate = async (estimateUrl) => {
 
           return {
             productName,
-            productDescription,
             quantity,
             price,
             tax,
@@ -519,25 +532,17 @@ const scrapeEstimate = async (estimateUrl) => {
     }
 
     console.log(`Scraped ${lineItems.length} line items successfully.`);
-
     if (description) {
       console.log(
-        `General description found: ${description.substring(0, 100)}${
+        `Description found: ${description.substring(0, 100)}${
           description.length > 100 ? "..." : ""
         }`
       );
     } else {
-      console.log("No general description found");
+      console.log("No description found");
     }
 
-    const itemsWithDesc = lineItems.filter(
-      (item) =>
-        item.productDescription &&
-        item.productDescription !== "N/A" &&
-        item.productDescription.trim()
-    );
-    console.log(`${itemsWithDesc.length} items have individual descriptions`);
-
+    // Send to Discord with improved formatting
     await sendEstimateToDiscord(estimateUrl, lineItems, metaData, description);
 
     return { lineItems, metaData, description };
