@@ -316,6 +316,7 @@ const scrapeEstimate = async (estimateUrl) => {
 
     const lineItemsNoDesc = lineItems.map((item) => ({
       productName: item.productName,
+      productDescriptions: item.productDescriptions,
       price: item.price,
       total: item.total,
     }));
