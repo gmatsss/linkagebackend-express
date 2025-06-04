@@ -265,7 +265,8 @@ const scrapeEstimate = async (estimateUrl) => {
                 ".flex-grow.text-sm.text-gray-600.text-left.break-word"
               )
               ?.childNodes[0]?.textContent.trim() || "N/A";
-
+          const productDescriptions =
+            itemRow?.querySelectorAll(".estimate-preview-desc p") || [];
           const price =
             itemRow
               ?.querySelector(
@@ -289,6 +290,7 @@ const scrapeEstimate = async (estimateUrl) => {
 
           return {
             productName,
+            productDescriptions,
             price,
             tax,
             total,
