@@ -6,6 +6,7 @@ const MAX_DISCORD_MESSAGE_LENGTH = 2000;
 
 const sendEstimateToDiscord = async (estimateUrl, lineItems, metaData) => {
   let messages = [];
+  // Build the initial message header with meta data.
   let currentMessage = `**🔹 Estimate Scraped Successfully**\n🔗 [View Estimate](${estimateUrl})\n`;
   if (metaData) {
     currentMessage += `**🗓 Issue Date:** ${metaData.issueDate || "N/A"}\n`;
@@ -17,7 +18,6 @@ const sendEstimateToDiscord = async (estimateUrl, lineItems, metaData) => {
     let itemText = `**${index + 1}. ${item.productName}**\n   - 💬 ${
       item.productDescription
     }\n   - 💰 Price: ${item.price}\n   - 🏷️ Total: ${item.total}\n\n`;
-
     if (currentMessage.length + itemText.length > MAX_DISCORD_MESSAGE_LENGTH) {
       messages.push(currentMessage);
       currentMessage = "";
@@ -75,10 +75,12 @@ const scrapeEstimateLocal = async (estimateUrl) => {
       timeout: 180000,
     });
 
+    // Wait for the meta information container.
     await page.waitForSelector("div.grid.grid-cols-1.md\\:grid-cols-3.py-2", {
       timeout: 30000,
     });
 
+    // Extract meta information (Issue Date and Expiry Date)
     const metaData = await page.evaluate(() => {
       let issueDate = null,
         expiryDate = null;
@@ -107,64 +109,44 @@ const scrapeEstimateLocal = async (estimateUrl) => {
       return { issueDate, expiryDate };
     });
 
+    // Try waiting for the line items selector with a shorter timeout.
     let lineItems = [];
     try {
       await page.waitForSelector(".flex.hover\\:bg-gray-50", {
         timeout: 10000,
       });
-
-      const rawItems = await page.evaluate(() => {
-        const rows = Array.from(document.querySelectorAll("[index]"));
-        const descEls = Array.from(document.querySelectorAll("#prod_desc"));
-
-        return rows
-          .map((row, rowIndex) => {
-            const itemRow = row.querySelector(".flex.hover\\:bg-gray-50");
-            if (!itemRow) {
-              return null;
-            }
-
-            const nameNode = itemRow.querySelector(
-              ".flex-grow.text-sm.text-gray-600.text-left.break-word"
-            );
-            const productName =
-              nameNode?.childNodes[0]?.textContent.trim() || "N/A";
-
-            const productDescriptions =
-              descEls[rowIndex]?.innerText.trim() || "N/A";
-
-            const price =
-              itemRow
+      lineItems = await page.evaluate(() => {
+        return Array.from(
+          document.querySelectorAll(".flex.hover\\:bg-gray-50")
+        ).map((el) => {
+          let fullProductText =
+            el
+              .querySelector(
+                ".flex-grow.py-1.text-sm.text-gray-600.text-left.break-word"
+              )
+              ?.innerText.trim() || "N/A";
+          let [productName, ...productDescriptionArr] =
+            fullProductText.split("\n");
+          let productDescription =
+            productDescriptionArr.join(" ").trim() || "N/A";
+          return {
+            productName: productName.trim(),
+            productDescription,
+            price:
+              el
                 .querySelector(
-                  ".flex-none.w-32.pl-6.py-1.whitespace-nowrap.text-sm.text-gray-500.text-right.hidden.md\\:block"
+                  ".flex-none.w-32.pl-6.py-1.whitespace-nowrap.text-sm.text-gray-500.text-left.hidden.md\\:block"
                 )
-                ?.innerText.trim() || "N/A";
-
-            const total =
-              itemRow
+                ?.innerText.trim() || "N/A",
+            total:
+              el
                 .querySelector(
                   ".flex-none.w-32.py-1.whitespace-nowrap.text-sm.text-gray-500.text-right"
                 )
-                ?.innerText.trim() || "N/A";
-
-            return {
-              productName,
-              productDescriptions,
-              price,
-              total,
-            };
-          })
-          .filter(Boolean);
+                ?.innerText.trim() || "N/A",
+          };
+        });
       });
-
-      // Map each raw item into exactly the four keys sendEstimateToDiscord expects:
-      // { productName, productDescription, price, total }
-      lineItems = rawItems.map((item) => ({
-        productName: item.productName,
-        productDescription: item.productDescriptions,
-        price: item.price,
-        total: item.total,
-      }));
     } catch (lineErr) {
       console.warn(
         "No line items found or selector not available, proceeding with meta data only."
@@ -173,11 +155,12 @@ const scrapeEstimateLocal = async (estimateUrl) => {
 
     await browser.close();
 
+    // Optionally, if no line items are found, you could choose to throw an error or simply continue.
     if (lineItems.length === 0) {
       console.warn(`No line items found for ${estimateUrl}`);
-    } else {
-      console.log(`Scraped ${lineItems.length} line items successfully.`);
     }
+
+    console.log(`Scraped ${lineItems.length} line items successfully.`);
 
     // Send a Discord message with both meta data and line items.
     await sendEstimateToDiscord(estimateUrl, lineItems, metaData);
@@ -323,8 +306,8 @@ const scrapeEstimate = async (estimateUrl) => {
           return {
             productName,
             productDescriptions,
-            quantity,
             price,
+            quantity,
             tax,
             total,
           };
