@@ -107,6 +107,7 @@ const updateQuoteInWhmcs = async (userEmail, estimateUrl, estName) => {
       validuntil: finalExpiryDate,
       datecreated: finalIssueDate,
       lineitems: encodedLineItems,
+      proposal: `Please review your estimate here:\n${estimateUrl}`,
     };
 
     if (typeof clientIdentifier === "number") {
