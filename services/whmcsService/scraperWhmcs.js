@@ -282,12 +282,6 @@ const scrapeEstimate = async (estimateUrl) => {
                 ".flex-none.w-32.pl-6.py-1.whitespace-nowrap.text-sm.text-gray-500.text-right.hidden.md\\:block"
               )
               ?.innerText.trim() || "N/A";
-          const quantity =
-            itemRow
-              ?.querySelector(
-                ".flex-none.w-32.py-1.whitespace-nowrap.text-sm.text-gray-500.text-center.hidden\\md:block"
-              )
-              ?.innerText.trim() || "N/A";
 
           const tax =
             itemRow
@@ -307,7 +301,6 @@ const scrapeEstimate = async (estimateUrl) => {
             productName,
             productDescriptions,
             price,
-            quantity,
             tax,
             total,
           };
@@ -328,7 +321,6 @@ const scrapeEstimate = async (estimateUrl) => {
     const lineItemsNoDesc = lineItems.map((item) => ({
       productName: item.productName,
       productDescriptions: item.productDescriptions,
-      quantity: item.quantity,
       price: item.price,
       total: item.total,
     }));
