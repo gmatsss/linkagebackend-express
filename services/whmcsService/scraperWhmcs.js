@@ -266,9 +266,7 @@ const scrapeEstimate = async (estimateUrl) => {
               )
               ?.childNodes[0]?.textContent.trim() || "N/A";
 
-          const pEls = document.querySelectorAll(
-            ".pt-1.text-sm.text-gray-400.break-words.hyphens-auto.estimate-preview-desc"
-          );
+          const pEls = document.querySelectorAll("#prod_desc");
 
           const rowIndex = Array.from(
             document.querySelectorAll("[index]")
