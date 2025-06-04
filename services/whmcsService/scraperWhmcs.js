@@ -266,12 +266,10 @@ const scrapeEstimate = async (estimateUrl) => {
               )
               ?.childNodes[0]?.textContent.trim() || "N/A";
 
-          // Get description from page level instead of itemRow
           const pEls = document.querySelectorAll(
-            ".pt-1.text-sm.text-gray-400.break-words.hyphens-auto.estimate-preview-desc p"
+            ".pt-1.text-sm.text-gray-400.break-words.hyphens-auto.estimate-preview-desc"
           );
 
-          // Find the description elements that belong to this row
           const rowIndex = Array.from(
             document.querySelectorAll("[index]")
           ).indexOf(row);
