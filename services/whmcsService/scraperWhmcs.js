@@ -15,9 +15,14 @@ const sendEstimateToDiscord = async (estimateUrl, lineItems, metaData) => {
   currentMessage += `**📌 Line Items:**\n`;
 
   lineItems.forEach((item, index) => {
-    let itemText = `**${index + 1}. ${item.productName}**\n   - 💬 ${
-      item.productDescription
-    }\n   - 💰 Price: ${item.price}\n   - 🏷️ Total: ${item.total}\n\n`;
+    // Include quantity in the message
+    let itemText =
+      `**${index + 1}. ${item.productName}**\n` +
+      `   - 💬 ${item.productDescription}\n` +
+      `   - 📦 Quantity: ${item.quantity}\n` +
+      `   - 💰 Price: ${item.price}\n` +
+      `   - 🏷️ Total: ${item.total}\n\n`;
+
     if (currentMessage.length + itemText.length > MAX_DISCORD_MESSAGE_LENGTH) {
       messages.push(currentMessage);
       currentMessage = "";
@@ -129,9 +134,17 @@ const scrapeEstimateLocal = async (estimateUrl) => {
             fullProductText.split("\n");
           let productDescription =
             productDescriptionArr.join(" ").trim() || "N/A";
+
+          // NEW: Extract quantity
+          const quantityEl = el.querySelector(
+            ".flex-none.w-32.py-1.whitespace-nowrap.text-sm.text-gray-500.text-center.hidden.md\\:block"
+          );
+          const quantity = quantityEl?.innerText.trim() || "N/A";
+
           return {
             productName: productName.trim(),
             productDescription,
+            quantity,
             price:
               el
                 .querySelector(
@@ -155,7 +168,6 @@ const scrapeEstimateLocal = async (estimateUrl) => {
 
     await browser.close();
 
-    // Optionally, if no line items are found, you could choose to throw an error or simply continue.
     if (lineItems.length === 0) {
       console.warn(`No line items found for ${estimateUrl}`);
     }
@@ -267,7 +279,6 @@ const scrapeEstimate = async (estimateUrl) => {
               ?.childNodes[0]?.textContent.trim() || "N/A";
 
           const pEls = document.querySelectorAll("#prod_desc");
-
           const rowIndex = Array.from(
             document.querySelectorAll("[index]")
           ).indexOf(row);
@@ -275,6 +286,12 @@ const scrapeEstimate = async (estimateUrl) => {
             pEls.length > rowIndex && pEls[rowIndex]
               ? pEls[rowIndex].innerText.trim()
               : "N/A";
+
+          // NEW: Extract quantity
+          const quantityEl = itemRow.querySelector(
+            ".flex-none.w-32.py-1.whitespace-nowrap.text-sm.text-gray-500.text-center.hidden.md\\:block"
+          );
+          const quantity = quantityEl?.innerText.trim() || "N/A";
 
           const price =
             itemRow
@@ -300,6 +317,7 @@ const scrapeEstimate = async (estimateUrl) => {
           return {
             productName,
             productDescriptions,
+            quantity,
             price,
             tax,
             total,
@@ -318,9 +336,11 @@ const scrapeEstimate = async (estimateUrl) => {
       console.warn(`No line items found for ${estimateUrl}`);
     console.log(`Scraped ${lineItems.length} line items successfully.`);
 
+    // Strip out tax for Discord brevity
     const lineItemsNoDesc = lineItems.map((item) => ({
       productName: item.productName,
       productDescriptions: item.productDescriptions,
+      quantity: item.quantity,
       price: item.price,
       total: item.total,
     }));
