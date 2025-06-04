@@ -265,8 +265,13 @@ const scrapeEstimate = async (estimateUrl) => {
                 ".flex-grow.text-sm.text-gray-600.text-left.break-word"
               )
               ?.childNodes[0]?.textContent.trim() || "N/A";
-          const productDescriptions =
+          const pEls =
             itemRow?.querySelectorAll(".estimate-preview-desc p") || [];
+          const productDescriptions = pEls.length
+            ? Array.from(pEls)
+                .map((p) => p.innerText.trim())
+                .join("\n\n") // you can choose a different separator if you like
+            : "N/A";
           const price =
             itemRow
               ?.querySelector(
