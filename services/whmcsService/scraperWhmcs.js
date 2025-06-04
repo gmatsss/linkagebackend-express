@@ -265,13 +265,21 @@ const scrapeEstimate = async (estimateUrl) => {
                 ".flex-grow.text-sm.text-gray-600.text-left.break-word"
               )
               ?.childNodes[0]?.textContent.trim() || "N/A";
-          const pEls =
-            itemRow?.querySelectorAll(".estimate-preview-desc p") || [];
-          const productDescriptions = pEls.length
-            ? Array.from(pEls)
-                .map((p) => p.innerText.trim())
-                .join("\n\n") // you can choose a different separator if you like
-            : "N/A";
+
+          // Get description from page level instead of itemRow
+          const pEls = document.querySelectorAll(
+            ".pt-1.text-sm.text-gray-400.break-words.hyphens-auto.estimate-preview-desc p"
+          );
+
+          // Find the description elements that belong to this row
+          const rowIndex = Array.from(
+            document.querySelectorAll("[index]")
+          ).indexOf(row);
+          const productDescriptions =
+            pEls.length > rowIndex && pEls[rowIndex]
+              ? pEls[rowIndex].innerText.trim()
+              : "N/A";
+
           const price =
             itemRow
               ?.querySelector(
