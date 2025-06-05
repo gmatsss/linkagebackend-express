@@ -156,4 +156,9 @@ const notifyQuoteUpdated = async (
   });
 };
 
-module.exports = { findQuote, updateQuoteInWhmcs, notifyQuoteUpdated };
+module.exports = {
+  findQuote,
+  updateQuoteInWhmcs,
+  deleteQuoteInWhmcs,
+  notifyQuoteUpdated,
+};
