@@ -88,6 +88,7 @@ const updateExistingQuote = async (userEmail, estimateUrl, estName) => {
     // 7) Build the “CreateQuote” payload (new quote keeps only the new items, and no stage/status):
     const quoteParams = {
       subject: estName || "Estimate Quote on Venderflow",
+      stage: "Delivered",
       validuntil: finalExpiryDate,
       datecreated: finalIssueDate,
       lineitems: encodedLineItems,
