@@ -339,7 +339,8 @@ const scrapeEstimate = async (estimateUrl) => {
     // Strip out tax for Discord brevity
     const lineItemsNoDesc = lineItems.map((item) => ({
       productName: item.productName,
-      productDescriptions: item.productDescriptions,
+      productDescriptions:
+        `${item.productName}\n${item.productDescriptions}`.trim(),
       quantity: item.quantity,
       price: item.price,
       total: item.total,
