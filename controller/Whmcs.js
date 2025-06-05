@@ -27,6 +27,10 @@ const {
   notifyQuoteMarkedDead,
 } = require("../services/whmcsService/whmcsDeadService");
 
+const {
+  updateExistingQuote,
+} = require("../services/whmcsService/updateExistingQuote");
+
 exports.markQuoteAsDead = async (req, res) => {
   const userEmail = req.body.email;
   const estimateUrl = req.body.customData?.estiUlr;
@@ -114,6 +118,31 @@ exports.acceptquotewhmcs = async (req, res) => {
       message: `<@336794456063737857> An error occurred while updating the quote.\n\n**Error:** ${error.message}`,
       channelId: "1345967280605102120",
     });
+    return res.status(500).json({ error: "Internal server error." });
+  }
+};
+
+exports.updatequotewhmcs = async (req, res) => {
+  const userEmail = req.body.email;
+  const estimateUrl = req.body.customData?.estiUlr;
+  const estName = req.body.customData?.estiname || null;
+
+  if (!userEmail || !estimateUrl) {
+    return res
+      .status(400)
+      .json({ error: "Missing user email or estimate URL." });
+  }
+
+  try {
+    const success = await updateExistingQuote(userEmail, estimateUrl, estName);
+    if (!success) {
+      return res
+        .status(500)
+        .json({ error: "Failed to update existing quote in WHMCS." });
+    }
+    return res.status(200).json({ message: "Quote updated successfully!" });
+  } catch (err) {
+    console.error("Error in updatequotewhmcs:", err.message);
     return res.status(500).json({ error: "Internal server error." });
   }
 };
