@@ -1,4 +1,4 @@
-// services/whmcsService/whmcUpdateQuote.js
+// services/whmcsService/updateExistingQuote.js
 
 const axios = require("axios");
 const phpSerialize = require("php-serialize");
@@ -7,8 +7,11 @@ const { sendDiscordMessage } = require("../discordBotService");
 const {
   encodeLineItems,
   formatDateToYYYYMMDD,
+  createQuote,
 } = require("./whmcsQuoteService");
 const { scrapeEstimate } = require("./scraperWhmcs");
+const { getClientDetails } = require("./whmcsClientService");
+const { deleteQuoteInWhmcs } = require("./whmcUpdateQuote");
 
 // ─── helper to find the DynamoDB record (userEmail + estimateUrl) ───
 const findQuote = async (userEmail, estimateUrl) => {
@@ -23,12 +26,19 @@ const findQuote = async (userEmail, estimateUrl) => {
     }
     return quotes[0];
   } catch (err) {
+    await sendDiscordMessage({
+      title: "Error Searching DynamoDB",
+      statusCode: 500,
+      message: `Error fetching quote from DynamoDB: ${err.message}`,
+      channelId: "1345967280605102120",
+    });
     throw new Error("Error fetching quote from DynamoDB: " + err.message);
   }
 };
 
 // ─── Core function: updateExistingQuote ───
-// This updates the existing quote in WHMCS (keeping its current stage).
+// This will delete the old quote in WHMCS and create a new one (keeping the same logic
+// as whmcsUpdateQuote, but without setting or modifying the quote status/stage).
 const updateExistingQuote = async (userEmail, estimateUrl, estName) => {
   try {
     // 1) Look up the existing DynamoDB record to get quoteId:
@@ -37,19 +47,22 @@ const updateExistingQuote = async (userEmail, estimateUrl, estName) => {
       // No record → we can’t proceed
       return false;
     }
-    const existingQuoteId = quoteRecord.quoteId;
-    if (!existingQuoteId) {
+    const oldQuoteId = quoteRecord.quoteId;
+    if (!oldQuoteId) {
       // If DynamoDB record has no quoteId field, fail:
       return false;
     }
 
-    // 2) Scrape the live estimate page to get fresh line items + dates:
+    // 2) DELETE the old quote in WHMCS (so its line‐items are completely removed)
+    await deleteQuoteInWhmcs(oldQuoteId);
+
+    // 3) Scrape the live estimate page to get fresh line items + dates:
     const { lineItems, metaData } = await scrapeEstimate(estimateUrl);
 
-    // 3) Encode the new line items for WHMCS:
-    const encoded = encodeLineItems(lineItems);
+    // 4) Encode the new line items for WHMCS:
+    const encodedLineItems = encodeLineItems(lineItems);
 
-    // 4) Decide what “validuntil” (expiry) and “datecreated” (issue date) should be:
+    // 5) Determine “validuntil” (expiry) and “datecreated” (issue date):
     const finalExpiryDate = metaData?.expiryDate
       ? formatDateToYYYYMMDD(metaData.expiryDate)
       : formatDateToYYYYMMDD(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
@@ -57,66 +70,68 @@ const updateExistingQuote = async (userEmail, estimateUrl, estName) => {
       ? formatDateToYYYYMMDD(metaData.issueDate)
       : formatDateToYYYYMMDD(new Date());
 
-    // 5) Build the WHMCS UpdateQuote parameters. *** Crucial: do NOT include “stage” here. ***
-    const params = {
-      action: "UpdateQuote",
-      identifier: process.env.WHMCS_API_IDENTIFIER,
-      secret: process.env.WHMCS_API_SECRET,
-      responsetype: "json",
-
-      quoteid: existingQuoteId,
-      // If you want to allow changing subject, you can pass “subject: estName”:
-      subject: estName || undefined,
-      // These fields will overwrite line items and dates; stage is omitted so it stays unchanged:
-      validuntil: finalExpiryDate,
-      datecreated: finalIssueDate,
-      lineitems: encoded,
-      proposal: `Please review your updated estimate here:\n${estimateUrl}`,
-    };
-
-    // Remove any undefined keys (so subject doesn’t send undefined if estName was null):
-    for (const key of Object.keys(params)) {
-      if (params[key] === undefined) delete params[key];
+    // 6) Find or create the WHMCS client ID (userid) for this userEmail:
+    let clientIdentifier;
+    try {
+      const clientDetails = await getClientDetails(userEmail);
+      if (clientDetails?.result === "success" && clientDetails.client?.id) {
+        clientIdentifier = clientDetails.client.id;
+      } else {
+        // If client doesn’t exist yet, we’ll just pass email; WHMCS will create a new client record.
+        clientIdentifier = userEmail;
+      }
+    } catch (clientErr) {
+      // If getClientDetails throws, fall back to using email
+      clientIdentifier = userEmail;
     }
 
-    // 6) POST to WHMCS API:
-    const response = await axios.post(
-      process.env.WHMCS_API_URL,
-      new URLSearchParams(params).toString(),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      }
-    );
+    // 7) Build the “CreateQuote” payload (new quote keeps only the new items, and no stage/status):
+    const quoteParams = {
+      subject: estName || "Estimate Quote on Venderflow",
+      validuntil: finalExpiryDate,
+      datecreated: finalIssueDate,
+      lineitems: encodedLineItems,
+      proposal: `Please review your estimate here:\n${estimateUrl}`,
+    };
 
-    // 7) Check result:
-    if (response.data.result !== "success") {
+    // Attach either userid or email, depending on what we have
+    if (typeof clientIdentifier === "number") {
+      quoteParams.userid = clientIdentifier;
+    } else {
+      quoteParams.email = clientIdentifier;
+    }
+
+    // 8) CALL CreateQuote → this is a brand‐new quote, so WHMCS has zero old items to append
+    const quoteResponse = await createQuote(quoteParams);
+    if (quoteResponse.result !== "success") {
       await sendDiscordMessage({
-        title: "WHMCS Quote Update Failed",
+        title: "WHMCS Quote Replacement Failed",
         statusCode: 500,
-        message: `Failed to update quote in WHMCS. QuoteID: ${existingQuoteId}\nResponse: ${JSON.stringify(
-          response.data
+        message: `Failed to replace quote in WHMCS.\nOld QuoteID: ${oldQuoteId}\nResponse: ${JSON.stringify(
+          quoteResponse
         )}`,
         channelId: "1345967280605102120",
       });
       return false;
     }
 
-    // 8) (Optional) Send a success message in Discord to notify team:
+    // 9) Save the new quoteId in DynamoDB and notify via Discord
+    quoteRecord.quoteId = quoteResponse.quoteid;
+    await quoteRecord.save();
+
     await sendDiscordMessage({
-      title: "Quote Updated In WHMCS",
+      title: "Quote Replaced In WHMCS",
       statusCode: 200,
-      message: `✅ Quote ${existingQuoteId} updated (kept original stage).\nEstimate URL: ${estimateUrl}`,
+      message: `🔁 Old quote ${oldQuoteId} deleted. ➕ New quote ${quoteResponse.quoteid} created.\nEstimate URL: ${estimateUrl}`,
       channelId: "1345967280605102120",
     });
 
     return true;
   } catch (error) {
     await sendDiscordMessage({
-      title: "Error Updating Quote In WHMCS",
+      title: "Error Replacing Quote In WHMCS",
       statusCode: 500,
-      message: `<@336794456063737857> Error updating existing quote: ${error.message}`,
+      message: `<@336794456063737857> Error replacing existing quote: ${error.message}`,
       channelId: "1345967280605102120",
     });
     return false;
