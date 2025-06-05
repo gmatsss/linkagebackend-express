@@ -84,7 +84,9 @@ const updateExistingQuote = async (userEmail, estimateUrl, estName) => {
       process.env.WHMCS_API_URL,
       new URLSearchParams(params).toString(),
       {
-        headers: { "Content‐Type": "application/x‐www‐form‐urlencoded" },
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
       }
     );
 
