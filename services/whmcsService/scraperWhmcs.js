@@ -15,7 +15,7 @@ const sendEstimateToDiscord = async (estimateUrl, lineItems, metaData) => {
   currentMessage += `**📌 Line Items:**\n`;
 
   lineItems.forEach((item, index) => {
-    // Include quantity and the combined description
+    // Include quantity in the message
     let itemText =
       `**${index + 1}. ${item.productName}**\n` +
       `   - 💬 ${item.productDescription}\n` +
@@ -124,18 +124,16 @@ const scrapeEstimateLocal = async (estimateUrl) => {
         return Array.from(
           document.querySelectorAll(".flex.hover\\:bg-gray-50")
         ).map((el) => {
-          // FULL TEXT contains both name and description lines.
           let fullProductText =
             el
               .querySelector(
                 ".flex-grow.py-1.text-sm.text-gray-600.text-left.break-word"
               )
               ?.innerText.trim() || "N/A";
-
-          // Split on newline: first element is the productName; the rest join into the raw description.
           let [productName, ...productDescriptionArr] =
             fullProductText.split("\n");
-          let rawDescription = productDescriptionArr.join(" ").trim() || "N/A";
+          let productDescription =
+            productDescriptionArr.join(" ").trim() || "N/A";
 
           // NEW: Extract quantity
           const quantityEl = el.querySelector(
@@ -143,13 +141,9 @@ const scrapeEstimateLocal = async (estimateUrl) => {
           );
           const quantity = quantityEl?.innerText.trim() || "N/A";
 
-          // Build a combined description string that appends the productName at the end
-          let combinedDescription =
-            `${rawDescription}\n${productName.trim()}`.trim();
-
           return {
             productName: productName.trim(),
-            productDescription: combinedDescription,
+            productDescription,
             quantity,
             price:
               el
@@ -197,10 +191,6 @@ const scrapeEstimateLocal = async (estimateUrl) => {
     throw error;
   }
 };
-
-// --------------------------------------------------------------
-// Second scraper: scrapeEstimate (non-“Local”)—also append productName
-// --------------------------------------------------------------
 
 let useLocal = false;
 let showBrowser = false;
@@ -281,7 +271,6 @@ const scrapeEstimate = async (estimateUrl) => {
         return rows.map((row) => {
           const itemRow = row.querySelector(".flex.hover\\:bg-gray-50");
 
-          // Extract productName from the correct selector
           const productName =
             itemRow
               ?.querySelector(
@@ -289,12 +278,11 @@ const scrapeEstimate = async (estimateUrl) => {
               )
               ?.childNodes[0]?.textContent.trim() || "N/A";
 
-          // Grab all product description nodes in the table
           const pEls = document.querySelectorAll("#prod_desc");
           const rowIndex = Array.from(
             document.querySelectorAll("[index]")
           ).indexOf(row);
-          const rawDesc =
+          const productDescriptions =
             pEls.length > rowIndex && pEls[rowIndex]
               ? pEls[rowIndex].innerText.trim()
               : "N/A";
@@ -326,12 +314,9 @@ const scrapeEstimate = async (estimateUrl) => {
               )
               ?.innerText.trim() || "N/A";
 
-          // Combine raw description + productName
-          const combinedDescription = `${rawDesc}\n${productName}`.trim();
-
           return {
             productName,
-            productDescription: combinedDescription,
+            productDescriptions,
             quantity,
             price,
             tax,
@@ -351,10 +336,10 @@ const scrapeEstimate = async (estimateUrl) => {
       console.warn(`No line items found for ${estimateUrl}`);
     console.log(`Scraped ${lineItems.length} line items successfully.`);
 
-    // Strip out tax for Discord brevity, but keep productDescription
+    // Strip out tax for Discord brevity
     const lineItemsNoDesc = lineItems.map((item) => ({
       productName: item.productName,
-      productDescription: item.productDescription,
+      productDescriptions: item.productDescriptions,
       quantity: item.quantity,
       price: item.price,
       total: item.total,
