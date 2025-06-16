@@ -64,7 +64,7 @@ cron.schedule("0 * * * *", async () => {
   await fetchConversations();
 });
 
-cron.schedule("0 12 * * *", async () => {
+cron.schedule("25 21 * * *", async () => {
   console.log("🕕 Running daily scrape part 1 wiki");
   try {
     const result = await processScrapeWorkflow();
@@ -73,7 +73,7 @@ cron.schedule("0 12 * * *", async () => {
   }
 });
 
-cron.schedule("0 18 * * *", async () => {
+cron.schedule("30 21 * * *", async () => {
   console.log("🕕 Running daily scrape part 2 wiki");
   try {
     const result = await processScrapeWorkflowconvotab();
