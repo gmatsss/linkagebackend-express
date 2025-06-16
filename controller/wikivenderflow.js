@@ -32,6 +32,28 @@ async function processScrapeWorkflow() {
         batch,
         wpArticles
       );
+
+      for (const category of batch) {
+        for (const subCategory of category.subCategories || []) {
+          for (const article of subCategory.articles || []) {
+            const normalizedScrapedTitle = normalizeTitle(article.title);
+            const potentialDup = wpArticles.find(
+              (wp) => normalizeTitle(wp.title) === normalizedScrapedTitle
+            );
+            if (!potentialDup) {
+              const softMatch = wpArticles.find((wp) =>
+                normalizeTitle(wp.title).includes(normalizedScrapedTitle)
+              );
+              if (softMatch) {
+                console.warn(
+                  `[Possible False Negative] "${article.title}" vs "${softMatch.title}"`
+                );
+              }
+            }
+          }
+        }
+      }
+
       const newDataForWpBatch = await checkArticlesToCreate(batch, wpArticles);
 
       aggregatedArticlesToUpdate = aggregatedArticlesToUpdate.concat(
