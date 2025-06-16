@@ -1,4 +1,6 @@
 const axios = require("axios");
+const he = require("he");
+
 const {
   scrapeWikiVenderFlow,
   scrapeWikiVenderFlowFromConversations,
@@ -6,6 +8,19 @@ const {
 
 const checkArticlesToUpdate = require("../services/wikivenderflow/checkArticlesToUpdate");
 const checkArticlesToCreate = require("../services/wikivenderflow/checkArticlesToCreate");
+
+const normalizeTitle = (title) => {
+  if (!title) return "";
+  return he
+    .decode(title)
+    .replace(/\n|&nbsp;|\u00A0/g, " ")
+    .replace(/[''"""'"`]/g, "")
+    .replace(/[–—−]/g, "-")
+    .replace(/[.,!?;:(){}\[\]]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+};
 
 async function processScrapeWorkflow() {
   try {

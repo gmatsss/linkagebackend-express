@@ -64,39 +64,23 @@ cron.schedule("0 * * * *", async () => {
   await fetchConversations();
 });
 
-// Part 1: Every 10 minutes between 9-11 PM (including 11 PM)
-cron.schedule(
-  "*/10 21-23 * * *",
-  async () => {
-    console.log("🔁 Part 1 running every 10 minutes between 9–11 PM");
-    try {
-      await processScrapeWorkflow();
-    } catch (error) {
-      console.error("❌ Error in Part 1:", error.message);
-    }
-  },
-  {
-    timezone: "Asia/Manila",
+cron.schedule("0 12 * * *", async () => {
+  console.log("🕕 Running daily scrape part 1 wiki");
+  try {
+    const result = await processScrapeWorkflow();
+  } catch (error) {
+    console.error("❌ Error running daily scrape cron:", error.message);
   }
-);
+});
 
-// Part 2: Every 10 minutes (offset by 5 mins) between 9-11 PM
-cron.schedule(
-  "5-59/10 21-23 * * *",
-  async () => {
-    console.log(
-      "🔁 Part 2 running every 10 minutes (offset by 5 mins) between 9–11 PM"
-    );
-    try {
-      await processScrapeWorkflowconvotab();
-    } catch (error) {
-      console.error("❌ Error in Part 2:", error.message);
-    }
-  },
-  {
-    timezone: "Asia/Manila",
+cron.schedule("0 18 * * *", async () => {
+  console.log("🕕 Running daily scrape part 2 wiki");
+  try {
+    const result = await processScrapeWorkflowconvotab();
+  } catch (error) {
+    console.error("❌ Error running daily scrape cron:", error.message);
   }
-);
+});
 
 // Start server
 app.listen(PORT, "0.0.0.0", () => {
