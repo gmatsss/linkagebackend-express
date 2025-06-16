@@ -65,9 +65,9 @@ cron.schedule("0 * * * *", async () => {
 });
 
 cron.schedule(
-  "45 21 * * *",
+  "*/10 21-22 * * *",
   async () => {
-    console.log("✅ 9:45 PM cron fired - Part 1");
+    console.log("🔁 Part 1 running every 10 minutes between 9–11 PM");
     try {
       await processScrapeWorkflow();
     } catch (error) {
@@ -80,9 +80,11 @@ cron.schedule(
 );
 
 cron.schedule(
-  "50 21 * * *",
+  "5-59/10 21-22 * * *",
   async () => {
-    console.log("✅ 9:50 PM cron fired - Part 2");
+    console.log(
+      "🔁 Part 2 running every 10 minutes (offset by 5 mins) between 9–11 PM"
+    );
     try {
       await processScrapeWorkflowconvotab();
     } catch (error) {
