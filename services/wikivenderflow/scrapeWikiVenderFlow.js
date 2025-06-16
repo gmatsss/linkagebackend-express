@@ -21,6 +21,7 @@ const normalizeTitle = (title) => {
 const createBrowser = async () => {
   return await puppeteer.launch({
     headless: true,
+    protocolTimeout: 180000, // <-- Tim add this line
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
