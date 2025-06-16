@@ -10,11 +10,9 @@ const normalizeTitle = (title) => {
   return he
     .decode(title)
     .replace(/\n|&nbsp;|\u00A0/g, " ")
-    .replace(/[–—−]/g, "-")
-    .replace(/['"]/g, "'")
-    .replace(/[‘’]/g, "'")
-    .replace(/leadconnector/gi, "venderflow")
-    .replace(/\bprint\b/gi, "")
+    .replace(/[‘’“”"'"`]/g, "") // smart quotes and apostrophes
+    .replace(/[–—−]/g, "-") // dashes
+    .replace(/[.,!?;:(){}\[\]]/g, "") // punctuation
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
