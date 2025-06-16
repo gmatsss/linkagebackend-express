@@ -14,7 +14,7 @@ app.use(bodyParser.urlencoded({ limit: "150mb", extended: true }));
 const helloRoute = require("./routes/helloRoute");
 const woocomerceRoute = require("./routes/woocomerce");
 const discordnotifRoute = require("./routes/discordnotif");
-const pancakeRoute = require("./routes/pancake");
+//const pancakeRoute = require("./routes/pancake");
 const ghlMc = require("./routes/ghlMC");
 const instantlyRoute = require("./routes/instantly");
 const openaiRoute = require("./routes/openai");
@@ -38,7 +38,7 @@ app.use("/wikivenderflow", wikivenderflowRoute);
 app.use("/discordnotif", discordnotifRoute);
 app.use("/test", helloRoute);
 app.use("/woo", woocomerceRoute);
-app.use("/pancake", pancakeRoute);
+//app.use("/pancake", pancakeRoute);
 app.use("/ghlMCRoute", ghlMc);
 app.use("/instantly", instantlyRoute);
 app.use("/openai", openaiRoute);
@@ -64,8 +64,9 @@ cron.schedule("0 * * * *", async () => {
   await fetchConversations();
 });
 
+// Part 1: Every 10 minutes between 9-11 PM (including 11 PM)
 cron.schedule(
-  "*/10 21-22 * * *",
+  "*/10 21-23 * * *",
   async () => {
     console.log("🔁 Part 1 running every 10 minutes between 9–11 PM");
     try {
@@ -79,8 +80,9 @@ cron.schedule(
   }
 );
 
+// Part 2: Every 10 minutes (offset by 5 mins) between 9-11 PM
 cron.schedule(
-  "5-59/10 21-22 * * *",
+  "5-59/10 21-23 * * *",
   async () => {
     console.log(
       "🔁 Part 2 running every 10 minutes (offset by 5 mins) between 9–11 PM"
