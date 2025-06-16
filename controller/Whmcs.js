@@ -27,6 +27,10 @@ const {
   notifyQuoteMarkedDead,
 } = require("../services/whmcsService/whmcsDeadService");
 
+const {
+  updateExistingQuote,
+} = require("../services/whmcsService/updateExistingQuote");
+
 exports.markQuoteAsDead = async (req, res) => {
   const userEmail = req.body.email;
   const estimateUrl = req.body.customData?.estiUlr;
@@ -44,11 +48,9 @@ exports.markQuoteAsDead = async (req, res) => {
   }
 
   try {
-    // ✅ Find the quote in DynamoDB
     const quote = await findQuoteForDeadStatus(userEmail, estimateUrl);
     if (!quote) return res.status(404).json({ error: "Quote not found." });
 
-    // ✅ Update the quote in WHMCS to "Dead"
     const quoteUpdated = await updateQuoteToDeadInWhmcs(quote.quoteId);
     if (!quoteUpdated)
       return res
@@ -83,6 +85,7 @@ exports.markQuoteAsDead = async (req, res) => {
 exports.acceptquotewhmcs = async (req, res) => {
   const userEmail = req.body.email;
   const estimateUrl = req.body.customData?.estiUlr;
+  const estName = req.body.customData?.estiname;
 
   if (!userEmail || !estimateUrl) {
     await sendDiscordMessage({
@@ -97,40 +100,59 @@ exports.acceptquotewhmcs = async (req, res) => {
   }
 
   try {
-    const quote = await findQuote(userEmail, estimateUrl);
-    if (!quote) return res.status(404).json({ error: "Quote not found." });
+    // Pass estName in as the third argument:
+    const success = await updateQuoteInWhmcs(userEmail, estimateUrl, estName);
 
-    const quoteUpdated = await updateQuoteInWhmcs(quote.quoteId);
-    if (!quoteUpdated)
+    if (!success) {
       return res
         .status(500)
-        .json({ error: "Failed to update quote in WHMCS." });
+        .json({ error: "Failed to replace quote in WHMCS." });
+    }
 
-    await notifyQuoteUpdated(
-      estimateUrl,
-      req.body.first_name,
-      req.body.last_name,
-      userEmail,
-      quote.quoteId
-    );
-
-    res.status(200).json({
-      message: "Quote updated successfully in WHMCS!",
-      quoteId: quote.quoteId,
-    });
+    return res.status(200).json({ message: "Quote replaced successfully!" });
   } catch (error) {
+    console.error("❗ Error in acceptquotewhmcs:", error.message);
     await sendDiscordMessage({
-      title: "Error Updating Quote",
+      title: "Error Replacing Quote",
       statusCode: 500,
       message: `<@336794456063737857> An error occurred while updating the quote.\n\n**Error:** ${error.message}`,
       channelId: "1345967280605102120",
     });
+    return res.status(500).json({ error: "Internal server error." });
+  }
+};
 
-    res.status(500).json({ error: "Internal server error." });
+exports.updatequotewhmcs = async (req, res) => {
+  const userEmail = req.body.email;
+  const estimateUrl = req.body.customData?.estiUlr;
+  const estName = req.body.customData?.estiname || null;
+
+  if (!userEmail || !estimateUrl) {
+    return res
+      .status(400)
+      .json({ error: "Missing user email or estimate URL." });
+  }
+
+  try {
+    const success = await updateExistingQuote(userEmail, estimateUrl, estName);
+    if (!success) {
+      return res
+        .status(500)
+        .json({ error: "Failed to update existing quote in WHMCS." });
+    }
+    return res.status(200).json({ message: "Quote updated successfully!" });
+  } catch (err) {
+    console.error("Error in updatequotewhmcs:", err.message);
+    return res.status(500).json({ error: "Internal server error." });
   }
 };
 
 exports.receiveEstimateGhl = async (req, res) => {
+  console.log(
+    "🔥 GHL webhook fired! Payload was:",
+    JSON.stringify(req.body, null, 2)
+  );
+
   try {
     let clientDetails = {};
     let clientId = null;

@@ -18,8 +18,8 @@ const buildRequestParams = (action, additionalParams) => ({
 
 const encodeLineItems = (lineItems) => {
   const formattedItems = lineItems.map((item) => ({
-    desc: item.productDescription || item.productName,
-    qty: 1,
+    desc: item.productDescriptions,
+    qty: item.quantity,
     up: item.price.replace(/[^0-9.]/g, "") || "0.00",
     discount: "0.00",
     taxable: true,
