@@ -127,7 +127,31 @@ async function processScrapeWorkflowconvotab() {
         batch,
         wpArticles
       );
-      const newDataForWpBatch = await checkArticlesToCreate(batch, wpArticles);
+      // Titles that need updates
+      const updateTitles = new Set(
+        articleneedtoupdateBatch.map((art) => normalizeTitle(art.title))
+      );
+
+      // Remove from batch any articles already flagged for update
+      const filteredBatch = JSON.parse(JSON.stringify(batch)); // Deep clone
+
+      for (const category of filteredBatch) {
+        category.subCategories = category.subCategories
+          .map((subCategory) => {
+            subCategory.articles = subCategory.articles.filter((article) => {
+              const normTitle = normalizeTitle(article.title);
+              return !updateTitles.has(normTitle);
+            });
+            return subCategory;
+          })
+          .filter((sub) => sub.articles.length > 0);
+      }
+
+      // Only call checkArticlesToCreate with articles not needing update
+      const newDataForWpBatch = await checkArticlesToCreate(
+        filteredBatch,
+        wpArticles
+      );
 
       aggregatedArticlesToUpdate = aggregatedArticlesToUpdate.concat(
         articleneedtoupdateBatch

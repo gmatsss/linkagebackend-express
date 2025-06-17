@@ -27,6 +27,7 @@ const createBrowser = async () => {
       "--disable-setuid-sandbox",
       "--disable-dev-shm-usage",
       "--disable-gpu",
+      "--enable-webgl",
     ],
   });
 };
@@ -41,8 +42,8 @@ const setupPage = async (browser) => {
   await page.setUserAgent(
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
   );
-  page.setDefaultNavigationTimeout(60000);
-  page.setDefaultTimeout(60000);
+  page.setDefaultNavigationTimeout(180000);
+  page.setDefaultTimeout(180000);
   return page;
 };
 
@@ -63,8 +64,8 @@ const setupPage = async (browser) => {
 //   );
 //   page.on("console", (msg) => console.log("PAGE LOG:", msg.text()));
 //   // Removed setUserAgent to match local code
-//   page.setDefaultNavigationTimeout(1800000);
-//   page.setDefaultTimeout(1800000);
+//   page.setDefaultNavigationTimeout(180000);
+//   page.setDefaultTimeout(180000);
 //   return page;
 // };
 
@@ -88,7 +89,7 @@ const scrapeWikiVenderFlowFromConversations = async function* () {
         "https://help.leadconnectorhq.com/support/solutions",
         {
           waitUntil: "domcontentloaded",
-          timeout: 60000,
+          timeout: 180000,
         }
       );
     } catch (err) {
@@ -120,7 +121,7 @@ const scrapeWikiVenderFlowFromConversations = async function* () {
       const catPage = await setupPage(browser);
       await catPage.goto(mainCat.url, { waitUntil: "networkidle2" });
       await catPage.waitForSelector(".fc-solution-category", {
-        timeout: 1800000,
+        timeout: 180000,
       });
       const categoryTitle = await catPage.evaluate(() => {
         const heading = document.querySelector(
@@ -162,7 +163,7 @@ const scrapeWikiVenderFlowFromConversations = async function* () {
           await subPage.goto(currentUrl, { waitUntil: "networkidle2" });
           await subPage
             .waitForSelector("section.article-list.c-list", {
-              timeout: 1800000,
+              timeout: 180000,
             })
             .catch(() => {});
           await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -190,7 +191,7 @@ const scrapeWikiVenderFlowFromConversations = async function* () {
           const articlePage = await setupPage(browser);
           await articlePage.goto(article.url, { waitUntil: "networkidle2" });
           await articlePage
-            .waitForSelector("h2.heading", { timeout: 1800000 })
+            .waitForSelector("h2.heading", { timeout: 180000 })
             .catch(() => {});
           const articleData = await articlePage.evaluate(() => {
             const titleEl = document.querySelector("h2.heading");
@@ -300,7 +301,7 @@ const scrapeWikiVenderFlow = async function* () {
         "https://help.leadconnectorhq.com/support/solutions",
         {
           waitUntil: "domcontentloaded",
-          timeout: 60000,
+          timeout: 180000,
         }
       );
     } catch (err) {
@@ -332,7 +333,7 @@ const scrapeWikiVenderFlow = async function* () {
       const catPage = await setupPage(browser);
       await catPage.goto(mainCat.url, { waitUntil: "networkidle2" });
       await catPage.waitForSelector(".fc-solution-category", {
-        timeout: 1800000,
+        timeout: 180000,
       });
       const categoryTitle = await catPage.evaluate(() => {
         const heading = document.querySelector(
@@ -363,7 +364,7 @@ const scrapeWikiVenderFlow = async function* () {
           await subPage.goto(currentUrl, { waitUntil: "networkidle2" });
           await subPage
             .waitForSelector("section.article-list.c-list", {
-              timeout: 1800000,
+              timeout: 180000,
             })
             .catch(() => {});
           await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -391,7 +392,7 @@ const scrapeWikiVenderFlow = async function* () {
           const articlePage = await setupPage(browser);
           await articlePage.goto(article.url, { waitUntil: "networkidle2" });
           await articlePage
-            .waitForSelector("h2.heading", { timeout: 1800000 })
+            .waitForSelector("h2.heading", { timeout: 180000 })
             .catch(() => {});
           const articleData = await articlePage.evaluate(() => {
             const titleEl = document.querySelector("h2.heading");
