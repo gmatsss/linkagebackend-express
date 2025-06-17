@@ -84,12 +84,25 @@ const checkArticlesToCreate = async (scrapedData, wpArticles) => {
             });
             createdArticles.push(titleToCreate);
           } catch (error) {
-            let errorMsg = "";
-            if (error.response?.data) {
-              errorMsg = JSON.stringify(error.response.data, null, 2);
+            const knownSkipMessage =
+              "KB article with this title already exists.";
+            let rawError = "";
+
+            if (error.response?.data?.error) {
+              rawError = error.response.data.error;
             } else {
-              errorMsg = error.message;
+              rawError = error.message || "Unknown error";
             }
+
+            if (rawError === knownSkipMessage) {
+              alreadyExistsCount++;
+              continue;
+            }
+
+            const errorMsg = error.response?.data
+              ? JSON.stringify(error.response.data, null, 2)
+              : rawError;
+
             await sendDiscordMessage({
               title: "❌ Failed to Create Article",
               statusCode: 500,
