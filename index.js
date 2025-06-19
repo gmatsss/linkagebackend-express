@@ -24,7 +24,8 @@ const googlesheet = require("./routes/googlesheet");
 const wikivenderflowRoute = require("./routes/wikivenderflow");
 const supportvenderflow = require("./routes/supportVenderflow");
 const baseRoute = require("./routes/baseRoute");
-const outlook = require("./routes/premier/webhookoutlook");
+
+const serviceFusionRoutes = require("./routes/premier/serviceFusionRoutes");
 
 const fetchConversations = require("./cron/cron");
 const {
@@ -46,8 +47,8 @@ app.use("/itemdynamo", itemRoutes);
 app.use("/whmcs", Whmcs);
 app.use("/googlesheet", googlesheet);
 app.use("/supportvenderflow", supportvenderflow);
-app.use("/outlook", outlook);
 
+app.use("/sf", serviceFusionRoutes);
 // Health check route
 app.get("/health", (req, res) => {
   res.status(200).send("Healthy");
