@@ -1,4 +1,5 @@
 const axios = require("axios");
+const puppeteer = require('puppeteer');
 const dayjs = require("dayjs");
 
 getWaitingForPartsJobs = async (req, res) => {
@@ -711,8 +712,8 @@ const getinvoice = async (req, res) => {
     const allItems = [...(first.data.items || [])];
     const pageCount = Number(
       first.headers["x-pagination-page-count"] ||
-        first.data._meta?.pageCount ||
-        1
+      first.data._meta?.pageCount ||
+      1
     );
     console.log(
       `Page 1 fetched: ${allItems.length} items; total pages: ${pageCount}`
@@ -768,8 +769,151 @@ const getinvoice = async (req, res) => {
   }
 };
 
+const scrapeWebsite = async (req, res) => {
+  const { url, companyId, username, password, jobIds } = req.body;
+
+  if (!url || !companyId || !username || !password || !jobIds) return res.status(400).json({ error: 'Missing login credentials or URL' });
+
+  try {
+    const browser = await puppeteer.launch({
+      headless: 'new', // or `true` for older versions
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1366, height: 768 });
+    await page.goto(url, { waitUntil: 'networkidle2' });
+
+    //Login in servicefusion
+    await page.type('#company', companyId);
+    await page.type('#uid', username);
+    await page.type('#pwd', password);
+    await Promise.all([
+      page.click('button[type="submit"]'),
+      page.waitForNavigation({ waitUntil: 'networkidle2' }),
+    ]);
+
+    for (const jobId of jobIds) {
+      console.log(`🔄 Starting loop for Job ID: ${jobId}`);
+
+      // Step 1: Click #jobs-title
+      await page.waitForSelector('#jobs-title');
+      await page.hover('#jobs-title'); // to reveal hidden links
+      await page.click('#jobs-title');
+      await page.waitForNavigation({ waitUntil: 'networkidle2' });
+
+      // Step 2: Click job group element
+      const jobGroupSelector = `#${jobId}-main-jobStat-job`;
+      await page.waitForSelector(jobGroupSelector, { timeout: 60000 });
+      await page.click(jobGroupSelector);
+
+      // Wait for content to load after internal routing / loading screen
+      await page.waitForSelector(`a[href*="/jobs/jobView?id=${jobId}"]`, { timeout: 60000 });
+
+      // Step 3: Click options > "View details"
+      await page.evaluate((jobId) => {
+        const link = document.querySelector(`a[href*="/jobs/jobView?id=${jobId}"]`);
+        const tr = link?.closest('tr');
+        const optionsBtn = tr?.querySelector('.btn-group button');
+        optionsBtn?.click();
+      }, jobId);
+
+      // Click View Details link from dropdown
+      const viewDetailsSelector = `ul.dropdown-menu a[href="/jobs/jobView?id=${jobId}"]`;
+      await page.waitForSelector(viewDetailsSelector, { timeout: 10000 });
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'networkidle2' }),
+        page.click(viewDetailsSelector)
+      ]);
+
+      // Step 4: Wait and click anchor with id="statusManual"
+      await page.waitForSelector('a#statusManual', { timeout: 60000 });
+      await page.click('a#statusManual');
+
+      // Step 5: Change status to "ON HOLD SUSPEND"
+      await page.waitForSelector('select.input-medium');
+      const optionValue = await page.evaluate(() => {
+        const options = [...document.querySelectorAll('select.input-medium option')];
+        const match = options.find(opt => opt.textContent.includes('ON HOLD SUSPEND'));
+        return match?.value;
+      });
+
+      if (optionValue) {
+        await page.select('select.input-medium', optionValue);
+        await page.waitForNavigation({ waitUntil: 'networkidle2' });
+      } else {
+        console.warn(`⚠️ Could not find "ON HOLD SUSPEND" option for job ${jobId}`);
+      }
+
+      // Step 6: Click Notes button
+      await page.evaluate(() => {
+        const titles = Array.from(document.querySelectorAll('span.title'));
+        const notesTitle = titles.find(t => t.textContent.trim() === 'Notes');
+        if (notesTitle) {
+          const button = notesTitle.parentElement?.querySelector('button');
+          button?.click();
+        }
+      });
+
+      // Step 7: Type note and submit
+      await page.waitForSelector('textarea#add-new-note');
+      await page.type('textarea#add-new-note', 'something');
+      await page.click('button.btn.addNoteBtn');
+
+      console.log(`✅ Finished Job ID: ${jobId}`);
+    }
+
+    console.log('🎉 All jobs completed!');
+
+    // // Fill in login form
+    // await page.type('#email', email);
+    // await page.type('#password', password);
+    // await Promise.all([
+    //   page.click('button[class="login-email btn-primary"]'),
+    //   page.waitForNavigation({ waitUntil: 'networkidle2' }),
+    // ]);
+
+    // //Add an item
+    // await page.type('input[class="item-name"]', "Test");
+    // await page.type('input[class="item-price"]', "21");
+    // await page.type('input[class="item-unit"]', "1");
+    // await page.type('input[class="item-qnty"]', "12");
+    // await page.type('input[class="manufactured-date"]', "06-25-2025");
+    // await page.type('input[class="expiry-date"]', "08-25-2025");
+
+    // // Listen for the alert
+    // page.on('dialog', async dialog => {
+    //   console.log("ALERT detected: ", dialog.message());
+    //   await dialog.accept();
+    // });
+
+    // // Wait for the button to appear and be visible
+    // await page.waitForSelector('input.add-item', { visible: true });
+
+    // // Scroll into view (just in case it's off-screen)
+    // const addButton = await page.$('input.add-item');
+    // await addButton.evaluate(el => el.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+
+    // // Click the button
+    // await addButton.click();
+
+    // // Wait for page reload (after alert)
+    // await page.waitForNavigation({ waitUntil: 'networkidle2' });
+
+    // const title = await page.title();
+
+    await browser.close();
+
+    return res.json({ title });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   getWaitingForPartsJobs,
   getJobsByStatusName,
   getinvoice,
+  scrapeWebsite
 };

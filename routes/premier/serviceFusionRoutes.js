@@ -4,6 +4,7 @@ const {
   getWaitingForPartsJobs,
   getJobsByStatusName,
   getinvoice,
+  scrapeWebsite
 } = require("../../controller/premier/serviceFusionController");
 // const {
 //   handleSpeech,
@@ -18,6 +19,7 @@ const {
 
 router.post("/jobs", getWaitingForPartsJobs);
 router.post("/getinvoice", getinvoice);
+router.post("/scrape", scrapeWebsite);
 router.get("/bystatus", getJobsByStatusName);
 
 // //Collection Email Follow Up invoice
