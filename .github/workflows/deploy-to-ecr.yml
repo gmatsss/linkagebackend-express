@@ -1,0 +1,160 @@
+on:
+  push:
+    branches:
+      - main # Run this workflow only on pushes to the main branch
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY_URI: 541261779827.dkr.ecr.us-east-1.amazonaws.com/linkagebackend
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        run: |
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY_URI
+
+      - name: Build Docker image
+        run: |
+          docker build -t $ECR_REPOSITORY_URI:latest .
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push $ECR_REPOSITORY_URI:latest
+
+      - name: Register new ECS task definition
+        run: |
+          echo '{
+            "family": "LinkageTaskDefinition",
+            "executionRoleArn": "arn:aws:iam::541261779827:role/ecsTaskExecutionRole",
+            "containerDefinitions": [
+              {
+                "name": "express-backend",
+                "image": "${{ env.ECR_REPOSITORY_URI }}:latest",
+                "memory": 2048,
+                "cpu": 1024,
+                "essential": true,
+                "portMappings": [
+                  {
+                    "containerPort": 3000,
+                    "hostPort": 3000,
+                    "protocol": "tcp"
+                  }
+                ],
+                "environment": [
+                  {
+                    "name": "CONSUMER_KEY",
+                    "value": "${{ secrets.CONSUMERKEY }}"
+                  },
+                  {
+                    "name": "CONSUMER_SECRET",
+                    "value": "${{ secrets.CONSUMERSECRET }}"
+                  },
+                  {
+                    "name": "ZOOM_CLIENT_ID",
+                    "value": "${{ secrets.ZOOM_CLIENT_ID }}"
+                  },
+                  {
+                    "name": "ZOOM_CLIENT_SECRET",
+                    "value": "${{ secrets.ZOOM_CLIENT_SECRET }}"
+                  },
+                  {
+                    "name": "ZOOM_ACCOUNT_ID",
+                    "value": "${{ secrets.ZOOM_ACCOUNT_ID }}"
+                  },
+                  {
+                    "name": "ACCESS_TOKENPANCAKE",
+                    "value": "${{ secrets.ACCESS_TOKENPANCAKE }}"
+                  },
+                  {
+                    "name": "GHL_LINKAGEWEBSOL_TOKEN",
+                    "value": "${{ secrets.GHL_LINKAGEWEBSOL_TOKEN }}"
+                  },
+                  {
+                    "name": "DISCORD_TOKEN",
+                    "value": "${{ secrets.DISCORD_TOKEN }}"
+                  },
+                  {
+                    "name": "OPENAI_API_KEY",
+                    "value": "${{ secrets.OPENAI_API_KEY }}"
+                  },
+                  {
+                    "name": "AWS_ACCESS_KEY_ID",
+                    "value": "${{ secrets.AWS_ACCESS_KEY_ID }}"
+                  },
+                  {
+                    "name": "WHMCS_API_URL",
+                    "value": "${{ secrets.WHMCS_API_URL }}"
+                  },
+                  {
+                    "name": "WHMCS_API_IDENTIFIER",
+                    "value": "${{ secrets.WHMCS_API_IDENTIFIER }}"
+                  },
+                  {
+                    "name": "WHMCS_API_SECRET",
+                    "value": "${{ secrets.WHMCS_API_SECRET }}"
+                  },
+                      {
+                    "name": "WP_ADMIN_USERNAME",
+                    "value": "${{ secrets.WP_ADMIN_USERNAME }}"
+                  },
+                  {
+                    "name": "WP_ADMIN_PASSWORD",
+                    "value": "${{ secrets.WP_ADMIN_PASSWORD }}"
+                  },
+                  {
+                    "name": "MONDAY_API",
+                    "value": "${{ secrets.MONDAY_API }}"
+                  },
+                  {
+                    "name": "GHL_VENDERFLOW",
+                    "value": "${{ secrets.GHL_VENDERFLOW }}"
+                  },
+                  {
+                    "name": "AWS_SECRET_ACCESS_KEY",
+                    "value": "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+                  }
+                ],
+                "logConfiguration": {
+                  "logDriver": "awslogs",
+                  "options": {
+                    "awslogs-group": "/ecs/LinkageTaskDefinition",
+                    "awslogs-region": "${{ env.AWS_REGION }}",
+                    "awslogs-stream-prefix": "ecs"
+                  }
+                }
+              }
+            ],
+            "networkMode": "awsvpc",
+            "requiresCompatibilities": ["FARGATE"],
+            "cpu": "1024",
+            "memory": "2048"
+          }' > task-definition.json
+
+          aws ecs register-task-definition --cli-input-json file://task-definition.json
+
+      - name: Update ECS service to use the latest task definition
+        run: |
+          TASK_DEFINITION_ARN=$(aws ecs describe-task-definition --task-definition LinkageTaskDefinition --query 'taskDefinition.taskDefinitionArn' --output text)
+          aws ecs update-service --cluster LinkageCluster --service express-backend-service-v2 --task-definition $TASK_DEFINITION_ARN --force-new-deployment
+
+      - name: Update ECS Service Network Configuration (Disable Auto-Assign Public IP)
+        run: |
+          # Replace subnet IDs with the ones from your Network configuration
+          # Replace the security group ID with the correct one for your ECS service
+          aws ecs update-service \
+            --cluster LinkageCluster \
+            --service express-backend-service-v2 \
+            --network-configuration "awsvpcConfiguration={subnets=[subnet-052c898ef405e7e4e],securityGroups=[sg-05bc3dff8e3341287],assignPublicIp=DISABLED}"
