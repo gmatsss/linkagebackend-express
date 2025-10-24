@@ -95,42 +95,10 @@ cron.schedule("0 18 * * *", async () => {
 console.log("✅ Cron job scheduled: Scrape PART 2 (daily at 6:00 PM)");
 
 // Start server
-app.listen(PORT, "0.0.0.0", async () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log("\n" + "=".repeat(60));
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
   console.log("=".repeat(60));
   console.log("✅ All routes and cron jobs are active");
   console.log("=".repeat(60) + "\n");
-
-  // ONE-TIME TEST RUN on startup (for deployment testing)
-  console.log("🧪 Starting ONE-TIME test scraper run...\n");
-
-  try {
-    // Run Part 1 immediately
-    console.log("\n🕕 [TEST RUN] Running scrape PART 1");
-    console.log("=".repeat(60));
-    const result1 = await processScrapeWorkflow();
-    console.log("=".repeat(60));
-    console.log("✅ [TEST RUN] Scrape PART 1 completed successfully!\n");
-
-    // Schedule Part 2 to run 1 hour after Part 1 completes
-    console.log("⏰ [TEST RUN] Part 2 scheduled to run in 1 hour...\n");
-    setTimeout(async () => {
-      try {
-        console.log("\n🕕 [TEST RUN] Running scrape PART 2 (1 hour after Part 1)");
-        console.log("=".repeat(60));
-        const result2 = await processScrapeWorkflowconvotab();
-        console.log("=".repeat(60));
-        console.log("✅ [TEST RUN] Scrape PART 2 completed successfully!\n");
-        console.log("\n" + "=".repeat(60));
-        console.log("🎉 [TEST RUN] All test scraper workflows completed!");
-        console.log("💡 Regular cron schedules (12 PM & 6 PM) remain active");
-        console.log("=".repeat(60) + "\n");
-      } catch (error) {
-        console.error("\n❌ [TEST RUN] Error running scrape PART 2:", error.message);
-      }
-    }, 60 * 60 * 1000); // 1 hour = 60 minutes * 60 seconds * 1000 milliseconds
-  } catch (error) {
-    console.error("\n❌ [TEST RUN] Error running scrape PART 1:", error.message);
-  }
 });
