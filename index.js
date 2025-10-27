@@ -68,8 +68,8 @@ cron.schedule("0 * * * *", async () => {
 });
 console.log("✅ Cron job scheduled: Fetch conversations (every hour)");
 
-cron.schedule("0 12 * * *", async () => {
-  console.log("\n🕕 Running daily scrape PART 1 (12:00 PM daily)");
+cron.schedule("0 4 * * *", async () => {
+  console.log("\n🕕 Running daily scrape PART 1 (12:00 PM Manila / 04:00 UTC)");
   console.log("=".repeat(60));
   try {
     const result = await processScrapeWorkflow();
@@ -79,10 +79,10 @@ cron.schedule("0 12 * * *", async () => {
     console.error("❌ Error running daily scrape PART 1:", error.message);
   }
 });
-console.log("✅ Cron job scheduled: Scrape PART 1 (daily at 12:00 PM)");
+console.log("✅ Cron job scheduled: Scrape PART 1 (daily at 12:00 PM Manila / 04:00 UTC)");
 
 cron.schedule("0 18 * * *", async () => {
-  console.log("\n🕕 Running daily scrape PART 2 (6:00 PM daily)");
+  console.log("\n🕛 Running daily scrape PART 2 (02:00 AM Manila / 18:00 UTC)");
   console.log("=".repeat(60));
   try {
     const result = await processScrapeWorkflowconvotab();
@@ -92,7 +92,7 @@ cron.schedule("0 18 * * *", async () => {
     console.error("❌ Error running daily scrape PART 2:", error.message);
   }
 });
-console.log("✅ Cron job scheduled: Scrape PART 2 (daily at 6:00 PM)");
+console.log("✅ Cron job scheduled: Scrape PART 2 (daily at 02:00 AM Manila / 18:00 UTC)");
 
 // Start server
 app.listen(PORT, "0.0.0.0", () => {
