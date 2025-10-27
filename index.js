@@ -68,31 +68,32 @@ cron.schedule("0 * * * *", async () => {
 });
 console.log("✅ Cron job scheduled: Fetch conversations (every hour)");
 
-cron.schedule("0 4 * * *", async () => {
-  console.log("\n🕕 Running daily scrape PART 1 (12:00 PM Manila / 04:00 UTC)");
-  console.log("=".repeat(60));
-  try {
-    const result = await processScrapeWorkflow();
-    console.log("=".repeat(60));
-    console.log("✅ Daily scrape PART 1 completed successfully!\n");
-  } catch (error) {
-    console.error("❌ Error running daily scrape PART 1:", error.message);
-  }
-});
-console.log("✅ Cron job scheduled: Scrape PART 1 (daily at 12:00 PM Manila / 04:00 UTC)");
-
 cron.schedule("0 18 * * *", async () => {
-  console.log("\n🕛 Running daily scrape PART 2 (02:00 AM Manila / 18:00 UTC)");
+  console.log("\n🕛 Running daily scraper sequence (02:00 AM Manila / 18:00 UTC)");
   console.log("=".repeat(60));
+
   try {
-    const result = await processScrapeWorkflowconvotab();
+    // Run PART 1
+    console.log("▶️  Running PART 1...");
+    await processScrapeWorkflow();
+    console.log("✅ PART 1 completed!\n");
+
+    // Wait 1 hour before running PART 2
+    console.log("⏳ Waiting 1 hour before starting PART 2...");
+    await new Promise(resolve => setTimeout(resolve, 60 * 60 * 1000)); // 1 hour
+
+    // Run PART 2
+    console.log("▶️  Running PART 2 (1 hour after PART 1 completed)...");
+    await processScrapeWorkflowconvotab();
+    console.log("✅ PART 2 completed!\n");
+
     console.log("=".repeat(60));
-    console.log("✅ Daily scrape PART 2 completed successfully!\n");
+    console.log("🎉 Daily scraper sequence finished!\n");
   } catch (error) {
-    console.error("❌ Error running daily scrape PART 2:", error.message);
+    console.error("❌ Error running daily scraper sequence:", error.message);
   }
 });
-console.log("✅ Cron job scheduled: Scrape PART 2 (daily at 02:00 AM Manila / 18:00 UTC)");
+console.log("✅ Cron job scheduled: Daily scraper sequence at 02:00 AM Manila / 18:00 UTC (PART 1 → wait 1 hour → PART 2)");
 
 // Start server
 app.listen(PORT, "0.0.0.0", () => {
