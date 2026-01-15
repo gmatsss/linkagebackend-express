@@ -117,52 +117,50 @@ const scrapeEstimateLocal = async (estimateUrl) => {
     // Try waiting for the line items selector with a shorter timeout.
     let lineItems = [];
     try {
-      await page.waitForSelector(".flex.hover\\:bg-gray-50", {
+      await page.waitForSelector(".w-full.hover\\:bg-gray-50", {
         timeout: 10000,
       });
       lineItems = await page.evaluate(() => {
         return Array.from(
-          document.querySelectorAll(".flex.hover\\:bg-gray-50")
+          document.querySelectorAll(".w-full.hover\\:bg-gray-50")
         ).map((el) => {
-          let fullProductText =
-            el
-              .querySelector(
-                ".flex-grow.py-1.text-sm.text-gray-600.text-left.break-word"
-              )
-              ?.innerText.trim() || "N/A";
-          let [productName, ...productDescriptionArr] =
-            fullProductText.split("\n");
-          let productDescription =
-            productDescriptionArr.join(" ").trim() || "N/A";
-
-          // NEW: Extract quantity
-          const quantityEl = el.querySelector(
-            ".flex-none.w-32.py-1.whitespace-nowrap.text-sm.text-gray-500.text-center.hidden.md\\:block"
+          // Extract product name
+          const productNameEl = el.querySelector(
+            ".max-w-\\[40%\\].max-md\\:max-w-\\[70%\\].py-1.flex-grow.text-sm.text-gray-900.text-left.break-word"
           );
-          const quantity = quantityEl?.innerText.trim() || "N/A";
+          const productName = productNameEl?.innerText.trim() || "N/A";
+
+          // Extract price - look for text-right elements
+          const priceEls = Array.from(el.querySelectorAll(".text-right.text-gray-500, .text-right.text-gray-900"));
+          const price = priceEls.length > 0 ? priceEls[0].innerText.trim() : "N/A";
+
+          // Extract quantity - look for text-center element in hidden md:block
+          const quantityEl = el.querySelector(
+            ".text-center.hidden.md\\:block, .text-center[class*='hidden'][class*='md']"
+          );
+          const quantity = quantityEl?.innerText.trim() || "1";
+
+          // Extract total/subtotal - usually the last text-right
+          const totalEl = priceEls.length > 1 ? priceEls[priceEls.length - 1] : priceEls[0];
+          const total = totalEl?.innerText.trim() || price;
+
+          // Get description from the prod_desc div if available
+          const descriptionEl = el.querySelector("[id*='prod_desc']");
+          const productDescription = descriptionEl?.innerText.trim() || "N/A";
 
           return {
-            productName: productName.trim(),
+            productName,
             productDescription,
             quantity,
-            price:
-              el
-                .querySelector(
-                  ".flex-none.w-32.pl-6.py-1.whitespace-nowrap.text-sm.text-gray-500.text-left.hidden.md\\:block"
-                )
-                ?.innerText.trim() || "N/A",
-            total:
-              el
-                .querySelector(
-                  ".flex-none.w-32.py-1.whitespace-nowrap.text-sm.text-gray-500.text-right"
-                )
-                ?.innerText.trim() || "N/A",
+            price,
+            total,
           };
         });
       });
     } catch (lineErr) {
       console.warn(
-        "No line items found or selector not available, proceeding with meta data only."
+        "No line items found or selector not available, proceeding with meta data only.",
+        lineErr.message
       );
     }
 
