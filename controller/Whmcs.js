@@ -188,7 +188,7 @@ exports.receiveEstimateGhl = async (req, res) => {
       };
     }
 
-    const estimateUrl = req.body.customData?.estiUlr;
+    const estimateUrl = req.body.customData?.estiUrl;
     if (!estimateUrl) {
       return res.status(400).json({ error: "Estimate URL is missing." });
     }
@@ -207,7 +207,7 @@ exports.receiveEstimateGhl = async (req, res) => {
         : "";
 
     const quoteParams = {
-      subject: req.body.customData?.estiname || "Estimate Quote on Venderflow",
+      subject: req.body.customData?.estimateName || "Estimate Quote on Venderflow",
       stage: "Delivered",
       validuntil: finalExpiryDate,
       datecreated: finalIssueDate,
