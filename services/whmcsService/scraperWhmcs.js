@@ -192,7 +192,7 @@ const scrapeEstimateLocal = async (estimateUrl) => {
   }
 };
 
-let useLocal = false;
+let useLocal = true;
 let showBrowser = false;
 
 const scrapeEstimate = async (estimateUrl) => {
