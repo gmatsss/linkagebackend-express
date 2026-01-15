@@ -188,7 +188,7 @@ exports.receiveEstimateGhl = async (req, res) => {
       };
     }
 
-    const estimateUrl = req.body.customData?.estiUrl;
+    const estimateUrl = req.body.customData?.estiUlr;
     if (!estimateUrl) {
       return res.status(400).json({ error: "Estimate URL is missing." });
     }
