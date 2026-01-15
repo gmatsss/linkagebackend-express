@@ -114,48 +114,86 @@ const scrapeEstimateLocal = async (estimateUrl) => {
       return { issueDate, expiryDate };
     });
 
-    // Try waiting for the line items selector with a shorter timeout.
+    // Try waiting for line items with a simpler selector
     let lineItems = [];
     try {
-      await page.waitForSelector(".w-full.hover\\:bg-gray-50", {
+      // Wait for any div with w-full class that likely contains line items
+      await page.waitForSelector("div.w-full", {
         timeout: 10000,
       });
       lineItems = await page.evaluate(() => {
-        return Array.from(
-          document.querySelectorAll(".w-full.hover\\:bg-gray-50")
-        ).map((el) => {
+        console.log("[Scraper] Starting line item extraction...");
+
+        // Find all line item containers - look for divs with w-full that contain price info
+        const allDivs = Array.from(document.querySelectorAll("div.w-full"));
+        console.log(`[Scraper] Found ${allDivs.length} total div.w-full elements`);
+
+        const itemDivs = allDivs.filter(el => {
+          // Filter to only line items (those with max-w-[40%] for product name)
+          return el.querySelector(".max-w-\\[40%\\]") !== null;
+        });
+        console.log(`[Scraper] Filtered to ${itemDivs.length} line item containers`);
+
+        const items = itemDivs.map((el, index) => {
+          console.log(`[Scraper] Processing line item #${index + 1}`);
+
           // Extract product name
           const productNameEl = el.querySelector(
-            ".max-w-\\[40%\\].max-md\\:max-w-\\[70%\\].py-1.flex-grow.text-sm.text-gray-900.text-left.break-word"
+            ".max-w-\\[40%\\]"
           );
           const productName = productNameEl?.innerText.trim() || "N/A";
+          console.log(`  - Product Name: "${productName}"`);
 
-          // Extract price - look for text-right elements
-          const priceEls = Array.from(el.querySelectorAll(".text-right.text-gray-500, .text-right.text-gray-900"));
-          const price = priceEls.length > 0 ? priceEls[0].innerText.trim() : "N/A";
+          // Extract all text-right divs (contains prices)
+          const textRightEls = Array.from(el.querySelectorAll("div[class*='text-right']"));
+          console.log(`  - Found ${textRightEls.length} text-right elements`);
 
-          // Extract quantity - look for text-center element in hidden md:block
-          const quantityEl = el.querySelector(
-            ".text-center.hidden.md\\:block, .text-center[class*='hidden'][class*='md']"
-          );
-          const quantity = quantityEl?.innerText.trim() || "1";
+          let price = "N/A";
+          let total = "N/A";
 
-          // Extract total/subtotal - usually the last text-right
-          const totalEl = priceEls.length > 1 ? priceEls[priceEls.length - 1] : priceEls[0];
-          const total = totalEl?.innerText.trim() || price;
+          if (textRightEls.length > 0) {
+            price = textRightEls[0].innerText.trim();
+            total = textRightEls.length > 1 ? textRightEls[textRightEls.length - 1].innerText.trim() : price;
+            console.log(`  - Price: "${price}", Total: "${total}"`);
+          } else {
+            console.log(`  - WARNING: No text-right elements found`);
+          }
+
+          // Extract quantity from mobile view "$5.00 x 1" format or use default
+          const mobileQtyEl = el.querySelector(".block.md\\:hidden");
+          let quantity = "1";
+          if (mobileQtyEl) {
+            const mobileText = mobileQtyEl.innerText;
+            console.log(`  - Mobile qty element found: "${mobileText}"`);
+            const match = mobileText.match(/x\\s*(\\d+)/i);
+            if (match) {
+              quantity = match[1];
+              console.log(`  - Extracted quantity: "${quantity}"`);
+            } else {
+              console.log(`  - Could not extract quantity from "${mobileText}", using default "1"`);
+            }
+          } else {
+            console.log(`  - No mobile qty element found, using default quantity "1"`);
+          }
 
           // Get description from the prod_desc div if available
           const descriptionEl = el.querySelector("[id*='prod_desc']");
           const productDescription = descriptionEl?.innerText.trim() || "N/A";
+          console.log(`  - Description: "${productDescription.substring(0, 50)}${productDescription.length > 50 ? '...' : ''}"`);
 
-          return {
+          const item = {
             productName,
             productDescription,
             quantity,
             price,
             total,
           };
+          console.log(`  ✓ Item extracted successfully`);
+          return item;
         });
+
+        console.log(`[Scraper] ✓ Extraction complete. Found ${items.length} line items total`);
+        return items;
       });
     } catch (lineErr) {
       console.warn(
