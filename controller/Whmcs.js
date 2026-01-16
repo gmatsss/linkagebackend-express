@@ -71,6 +71,18 @@ exports.markQuoteAsDead = async (req, res) => {
       estName
     );
 
+    // Scrape estimate to get amount for Zapier
+    let totalAmount = 0;
+    try {
+      const { lineItems } = await scrapeEstimate(estimateUrl);
+      totalAmount = lineItems.reduce((sum, item) => {
+        const price = parseFloat((item.total || item.price || "0").replace(/[^0-9.]/g, "")) || 0;
+        return sum + price;
+      }, 0);
+    } catch (scrapeErr) {
+      console.warn("Could not scrape estimate for amount:", scrapeErr.message);
+    }
+
     // Send data to Zapier
     const subjectEncoded = encodeURIComponent(estName || "Estimate Quote on Venderflow");
     const whmcsQuoteLink = `${WHMCS_QUOTES_URL}?filter=true&subject=${subjectEncoded}`;
@@ -78,7 +90,7 @@ exports.markQuoteAsDead = async (req, res) => {
       name: `${req.body.first_name || ""} ${req.body.last_name || ""}`.trim(),
       estimate_link_ghl: estimateUrl,
       quote_link_whmcs: whmcsQuoteLink,
-      amount: null,
+      amount: totalAmount.toFixed(2),
       status: "Dead",
     });
 
