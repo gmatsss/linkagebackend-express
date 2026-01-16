@@ -6,8 +6,19 @@ const WHMCS_API_URL = process.env.WHMCS_API_URL;
 const WHMCS_API_IDENTIFIER = process.env.WHMCS_API_IDENTIFIER;
 const WHMCS_API_SECRET = process.env.WHMCS_API_SECRET;
 const WHMCS_QUOTES_URL = "https://my.murphyconsulting.us/cadzone/quotes.php";
+const ZAPIER_WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/775472/ugl8xv8/";
 const DISCORD_CHANNEL_ID = "1345967280605102120";
 const MENTION_USER = "<@336794456063737857>";
+
+// Helper function to send data to Zapier webhook
+const sendToZapier = async (data) => {
+  try {
+    await axios.post(ZAPIER_WEBHOOK_URL, data);
+    console.log("Data sent to Zapier successfully:", data);
+  } catch (error) {
+    console.error("Error sending data to Zapier:", error.message);
+  }
+};
 
 const buildRequestParams = (action, additionalParams) => ({
   action,
@@ -120,4 +131,6 @@ module.exports = {
   formatDateToYYYYMMDD,
   createQuote,
   buildRequestParams,
+  sendToZapier,
+  WHMCS_QUOTES_URL,
 };

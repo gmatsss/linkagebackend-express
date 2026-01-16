@@ -9,6 +9,8 @@ const {
   encodeLineItems,
   createQuote,
   formatDateToYYYYMMDD,
+  sendToZapier,
+  WHMCS_QUOTES_URL,
 } = require("../services/whmcsService/whmcsQuoteService");
 
 const {
@@ -68,6 +70,17 @@ exports.markQuoteAsDead = async (req, res) => {
       quote.quoteId,
       estName
     );
+
+    // Send data to Zapier
+    const subjectEncoded = encodeURIComponent(estName || "Estimate Quote on Venderflow");
+    const whmcsQuoteLink = `${WHMCS_QUOTES_URL}?filter=true&subject=${subjectEncoded}`;
+    await sendToZapier({
+      name: `${req.body.first_name || ""} ${req.body.last_name || ""}`.trim(),
+      estimate_link_ghl: estimateUrl,
+      quote_link_whmcs: whmcsQuoteLink,
+      amount: null,
+      status: "Dead",
+    });
 
     res.status(200).json({
       message: "Quote successfully marked as 'Dead' in WHMCS!",
@@ -262,6 +275,23 @@ exports.receiveEstimateGhl = async (req, res) => {
       });
       await newQuote.save();
       console.log("Quote data saved to DynamoDB");
+
+      // Calculate total amount from line items
+      const totalAmount = lineItems.reduce((sum, item) => {
+        const price = parseFloat((item.total || item.price || "0").replace(/[^0-9.]/g, "")) || 0;
+        return sum + price;
+      }, 0);
+
+      // Send data to Zapier
+      const subjectEncoded = encodeURIComponent(estimateName);
+      const whmcsQuoteLink = `${WHMCS_QUOTES_URL}?filter=true&subject=${subjectEncoded}`;
+      await sendToZapier({
+        name: `${req.body.first_name || ""} ${req.body.last_name || ""}`.trim(),
+        estimate_link_ghl: estimateUrl,
+        quote_link_whmcs: whmcsQuoteLink,
+        amount: totalAmount.toFixed(2),
+        status: "Delivered",
+      });
     }
 
     return res.status(200).json({

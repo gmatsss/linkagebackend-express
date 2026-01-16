@@ -8,6 +8,7 @@ const {
   encodeLineItems,
   formatDateToYYYYMMDD,
   createQuote,
+  sendToZapier,
 } = require("./whmcsQuoteService");
 const { scrapeEstimate } = require("./scraperWhmcs");
 const { getClientDetails } = require("./whmcsClientService");
@@ -130,6 +131,21 @@ const updateExistingQuote = async (userEmail, estimateUrl, estName) => {
       statusCode: 200,
       message: `🔁 Old quote ${oldQuoteId} deleted. ➕ New quote ${quoteResponse.quoteid} created.\nEstimate URL: ${estimateUrl}\n🔗 [View Quote in WHMCS](${whmcsQuoteLink})`,
       channelId: "1345967280605102120",
+    });
+
+    // Calculate total amount from line items
+    const totalAmount = lineItems.reduce((sum, item) => {
+      const price = parseFloat((item.total || item.price || "0").replace(/[^0-9.]/g, "")) || 0;
+      return sum + price;
+    }, 0);
+
+    // Send data to Zapier
+    await sendToZapier({
+      name: userEmail,
+      estimate_link_ghl: estimateUrl,
+      quote_link_whmcs: whmcsQuoteLink,
+      amount: totalAmount.toFixed(2),
+      status: "Delivered",
     });
 
     return true;
