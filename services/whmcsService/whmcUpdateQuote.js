@@ -14,6 +14,7 @@ const {
 const { scrapeEstimate } = require("./scraperWhmcs");
 
 const DISCORD_CHANNEL_ID = "1345967280605102120";
+const WHMCS_QUOTES_URL = "https://my.murphyconsulting.us/cadzone/quotes.php";
 
 const findQuote = async (userEmail, estimateUrl) => {
   try {
@@ -122,10 +123,13 @@ const updateQuoteInWhmcs = async (userEmail, estimateUrl, estName) => {
     quoteRecord.quoteId = quoteResponse.quoteid;
     await quoteRecord.save();
 
+    const subjectEncoded = encodeURIComponent(estName || "Estimate Quote on Venderflow");
+    const whmcsQuoteLink = `${WHMCS_QUOTES_URL}?filter=true&subject=${subjectEncoded}`;
+
     await sendDiscordMessage({
       title: "Quote Replaced Successfully",
       statusCode: 200,
-      message: `🔁 Old quote deleted. ➕ New quote ${quoteResponse.quoteid} created and marked Accepted.\n🔗 ${estimateUrl}`,
+      message: `🔁 Old quote deleted. ➕ New quote ${quoteResponse.quoteid} created and marked Accepted.\n🔗 ${estimateUrl}\n🔗 [View Quote in WHMCS](${whmcsQuoteLink})`,
       channelId: DISCORD_CHANNEL_ID,
     });
 
@@ -146,12 +150,16 @@ const notifyQuoteUpdated = async (
   firstName,
   lastName,
   userEmail,
-  quoteId
+  quoteId,
+  estName
 ) => {
+  const subjectEncoded = encodeURIComponent(estName || "Estimate Quote on Venderflow");
+  const whmcsQuoteLink = `${WHMCS_QUOTES_URL}?filter=true&subject=${subjectEncoded}`;
+
   await sendDiscordMessage({
     title: "Quote Updated Successfully",
     statusCode: 200,
-    message: `Quote successfully updated to 'Accepted'.\n\n**Estimate URL:** ${estimateUrl}\n**User Name:** ${firstName} ${lastName}\n**User Email:** ${userEmail}\n**Quote ID:** ${quoteId}`,
+    message: `Quote successfully updated to 'Accepted'.\n\n**Estimate URL:** ${estimateUrl}\n**User Name:** ${firstName} ${lastName}\n**User Email:** ${userEmail}\n**Quote ID:** ${quoteId}\n🔗 [View Quote in WHMCS](${whmcsQuoteLink})`,
     channelId: DISCORD_CHANNEL_ID,
   });
 };

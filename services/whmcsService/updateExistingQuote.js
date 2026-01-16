@@ -13,6 +13,8 @@ const { scrapeEstimate } = require("./scraperWhmcs");
 const { getClientDetails } = require("./whmcsClientService");
 const { deleteQuoteInWhmcs } = require("./whmcUpdateQuote");
 
+const WHMCS_QUOTES_URL = "https://my.murphyconsulting.us/cadzone/quotes.php";
+
 // ─── helper to find the DynamoDB record (userEmail + estimateUrl) ───
 const findQuote = async (userEmail, estimateUrl) => {
   try {
@@ -120,10 +122,13 @@ const updateExistingQuote = async (userEmail, estimateUrl, estName) => {
     quoteRecord.quoteId = quoteResponse.quoteid;
     await quoteRecord.save();
 
+    const subjectEncoded = encodeURIComponent(estName || "Estimate Quote on Venderflow");
+    const whmcsQuoteLink = `${WHMCS_QUOTES_URL}?filter=true&subject=${subjectEncoded}`;
+
     await sendDiscordMessage({
       title: "Quote Replaced In WHMCS",
       statusCode: 200,
-      message: `🔁 Old quote ${oldQuoteId} deleted. ➕ New quote ${quoteResponse.quoteid} created.\nEstimate URL: ${estimateUrl}`,
+      message: `🔁 Old quote ${oldQuoteId} deleted. ➕ New quote ${quoteResponse.quoteid} created.\nEstimate URL: ${estimateUrl}\n🔗 [View Quote in WHMCS](${whmcsQuoteLink})`,
       channelId: "1345967280605102120",
     });
 

@@ -2,6 +2,8 @@ const axios = require("axios");
 const QuoteModel = require("../../dynamodb/model/Quote");
 const { sendDiscordMessage } = require("../discordBotService");
 
+const WHMCS_QUOTES_URL = "https://my.murphyconsulting.us/cadzone/quotes.php";
+
 // ✅ Function to find a quote in DynamoDB
 const findQuoteForDeadStatus = async (userEmail, estimateUrl) => {
   try {
@@ -82,12 +84,16 @@ const notifyQuoteMarkedDead = async (
   firstName,
   lastName,
   userEmail,
-  quoteId
+  quoteId,
+  estName
 ) => {
+  const subjectEncoded = encodeURIComponent(estName || "Estimate Quote on Venderflow");
+  const whmcsQuoteLink = `${WHMCS_QUOTES_URL}?filter=true&subject=${subjectEncoded}`;
+
   await sendDiscordMessage({
     title: "Quote Marked as Dead",
     statusCode: 200,
-    message: `Quote successfully updated to 'Dead'.\n\n**Estimate URL:** ${estimateUrl}\n**User Name:** ${firstName} ${lastName}\n**User Email:** ${userEmail}\n**Quote ID:** ${quoteId}`,
+    message: `Quote successfully updated to 'Dead'.\n\n**Estimate URL:** ${estimateUrl}\n**User Name:** ${firstName} ${lastName}\n**User Email:** ${userEmail}\n**Quote ID:** ${quoteId}\n🔗 [View Quote in WHMCS](${whmcsQuoteLink})`,
     channelId: "1345967280605102120",
   });
 };

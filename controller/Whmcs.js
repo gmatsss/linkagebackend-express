@@ -35,6 +35,7 @@ const {
 exports.markQuoteAsDead = async (req, res) => {
   const userEmail = req.body.email;
   const estimateUrl = req.body.customData?.estiUlr;
+  const estName = req.body.customData?.estimateName || req.body.customData?.estiname;
 
   if (!userEmail || !estimateUrl) {
     await sendDiscordMessage({
@@ -64,7 +65,8 @@ exports.markQuoteAsDead = async (req, res) => {
       req.body.first_name,
       req.body.last_name,
       userEmail,
-      quote.quoteId
+      quote.quoteId,
+      estName
     );
 
     res.status(200).json({
