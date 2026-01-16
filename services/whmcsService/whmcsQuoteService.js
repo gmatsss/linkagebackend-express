@@ -5,6 +5,7 @@ const { sendDiscordMessage } = require("../discordBotService");
 const WHMCS_API_URL = process.env.WHMCS_API_URL;
 const WHMCS_API_IDENTIFIER = process.env.WHMCS_API_IDENTIFIER;
 const WHMCS_API_SECRET = process.env.WHMCS_API_SECRET;
+const WHMCS_ADMIN_URL = "https://billing.murphyconsulting.us/admin";
 const DISCORD_CHANNEL_ID = "1345967280605102120";
 const MENTION_USER = "<@336794456063737857>";
 
@@ -68,10 +69,14 @@ const createQuote = async (quoteParams) => {
     const response = await axios.post(WHMCS_API_URL, formParams.toString(), {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
     });
+
+    const quoteId = response.data.quoteid;
+    const whmcsQuoteLink = `${WHMCS_ADMIN_URL}/quotes.php?action=manage&id=${quoteId}`;
+
     await sendDiscordMessage({
       title: "Quote Created Successfully",
       statusCode: 200,
-      message: `Quote response: ${JSON.stringify(response.data)}`,
+      message: `Quote ID: ${quoteId}\n🔗 [View Quote in WHMCS](${whmcsQuoteLink})\n\nQuote response: ${JSON.stringify(response.data)}`,
       channelId: DISCORD_CHANNEL_ID,
     });
     return response.data;

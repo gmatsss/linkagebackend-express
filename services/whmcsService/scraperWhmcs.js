@@ -114,85 +114,62 @@ const scrapeEstimateLocal = async (estimateUrl) => {
       return { issueDate, expiryDate };
     });
 
-    // Try waiting for line items with a simpler selector
+    // Wait for line items to load
     let lineItems = [];
     try {
-      // Wait for any div with w-full class that likely contains line items
-      await page.waitForSelector("div.w-full", {
-        timeout: 10000,
-      });
+      await page.waitForSelector("div.w-full", { timeout: 10000 });
+
       lineItems = await page.evaluate(() => {
-        console.log("[Scraper] Starting line item extraction...");
+        console.log("[Scraper] Starting extraction with hover:bg-gray-50 selector...");
 
-        // Find all line item containers - look for divs with w-full that contain price info
-        const allDivs = Array.from(document.querySelectorAll("div.w-full"));
-        console.log(`[Scraper] Found ${allDivs.length} total div.w-full elements`);
+        // The actual class is "w-full hover:bg-gray-50" - find these rows
+        const rows = Array.from(document.querySelectorAll('.w-full.hover\\:bg-gray-50'));
+        console.log(`[Scraper] Found ${rows.length} line item rows`);
 
-        const itemDivs = allDivs.filter(el => {
-          // Filter to only line items (those with max-w-[40%] for product name)
-          return el.querySelector(".max-w-\\[40%\\]") !== null;
-        });
-        console.log(`[Scraper] Filtered to ${itemDivs.length} line item containers`);
+        const items = rows.map((row, index) => {
+          console.log(`[Scraper] Processing row ${index + 1}`);
 
-        const items = itemDivs.map((el, index) => {
-          console.log(`[Scraper] Processing line item #${index + 1}`);
-
-          // Extract product name
-          const productNameEl = el.querySelector(
-            ".max-w-\\[40%\\]"
-          );
-          const productName = productNameEl?.innerText.trim() || "N/A";
+          // Get the first child div which contains product name
+          const firstChild = row.querySelector('.flex.max-md\\:pb-0.pr-1.justify-between');
+          const productName = firstChild?.firstElementChild?.innerText?.trim() || "N/A";
           console.log(`  - Product Name: "${productName}"`);
 
-          // Extract all text-right divs (contains prices)
-          const textRightEls = Array.from(el.querySelectorAll("div[class*='text-right']"));
-          console.log(`  - Found ${textRightEls.length} text-right elements`);
+          // Find divs with text-right class for prices
+          const textRightDivs = Array.from(row.querySelectorAll('div')).filter(d =>
+            d.className.includes('text-right') && d.innerText?.includes('$')
+          );
 
           let price = "N/A";
           let total = "N/A";
 
-          if (textRightEls.length > 0) {
-            price = textRightEls[0].innerText.trim();
-            total = textRightEls.length > 1 ? textRightEls[textRightEls.length - 1].innerText.trim() : price;
-            console.log(`  - Price: "${price}", Total: "${total}"`);
-          } else {
-            console.log(`  - WARNING: No text-right elements found`);
+          if (textRightDivs.length > 0) {
+            price = textRightDivs[0]?.innerText?.trim() || "N/A";
+            total = textRightDivs[textRightDivs.length - 1]?.innerText?.trim() || price;
+          }
+          console.log(`  - Price: "${price}", Total: "${total}"`);
+
+          // Get quantity - look for text-center div
+          const qtyDiv = row.querySelector('div.text-center');
+          const quantity = qtyDiv?.innerText?.trim() || "1";
+          console.log(`  - Quantity: "${quantity}"`);
+
+          // Get description from sibling element
+          let productDescription = "N/A";
+          const nextSibling = row.nextElementSibling;
+          if (nextSibling && !nextSibling.classList.contains('hover:bg-gray-50')) {
+            productDescription = nextSibling.innerText?.trim() || "N/A";
           }
 
-          // Extract quantity from mobile view "$5.00 x 1" format or use default
-          const mobileQtyEl = el.querySelector(".block.md\\:hidden");
-          let quantity = "1";
-          if (mobileQtyEl) {
-            const mobileText = mobileQtyEl.innerText;
-            console.log(`  - Mobile qty element found: "${mobileText}"`);
-            const match = mobileText.match(/x\\s*(\\d+)/i);
-            if (match) {
-              quantity = match[1];
-              console.log(`  - Extracted quantity: "${quantity}"`);
-            } else {
-              console.log(`  - Could not extract quantity from "${mobileText}", using default "1"`);
-            }
-          } else {
-            console.log(`  - No mobile qty element found, using default quantity "1"`);
-          }
-
-          // Get description from the prod_desc div if available
-          const descriptionEl = el.querySelector("[id*='prod_desc']");
-          const productDescription = descriptionEl?.innerText.trim() || "N/A";
-          console.log(`  - Description: "${productDescription.substring(0, 50)}${productDescription.length > 50 ? '...' : ''}"`);
-
-          const item = {
+          return {
             productName,
             productDescription,
             quantity,
             price,
             total,
           };
-          console.log(`  ✓ Item extracted successfully`);
-          return item;
         });
 
-        console.log(`[Scraper] ✓ Extraction complete. Found ${items.length} line items total`);
+        console.log(`[Scraper] Extraction complete. Found ${items.length} items`);
         return items;
       });
     } catch (lineErr) {
@@ -228,7 +205,7 @@ const scrapeEstimateLocal = async (estimateUrl) => {
   }
 };
 
-let useLocal = true;
+let useLocal = false;
 let showBrowser = false;
 
 const scrapeEstimate = async (estimateUrl) => {
@@ -299,66 +276,60 @@ const scrapeEstimate = async (estimateUrl) => {
 
     let lineItems = [];
     try {
-      await page.waitForSelector(".flex.hover\\:bg-gray-50", {
-        timeout: 10000,
-      });
+      await page.waitForSelector("div.w-full", { timeout: 10000 });
+
       lineItems = await page.evaluate(() => {
-        const rows = Array.from(document.querySelectorAll("[index]"));
-        return rows.map((row) => {
-          const itemRow = row.querySelector(".flex.hover\\:bg-gray-50");
+        console.log("[Scraper] Starting extraction with hover:bg-gray-50 selector...");
 
-          const productName =
-            itemRow
-              ?.querySelector(
-                ".flex-grow.text-sm.text-gray-600.text-left.break-word"
-              )
-              ?.childNodes[0]?.textContent.trim() || "N/A";
+        // The actual class is "w-full hover:bg-gray-50" - find these rows
+        const rows = Array.from(document.querySelectorAll('.w-full.hover\\:bg-gray-50'));
+        console.log(`[Scraper] Found ${rows.length} line item rows`);
 
-          const pEls = document.querySelectorAll("#prod_desc");
-          const rowIndex = Array.from(
-            document.querySelectorAll("[index]")
-          ).indexOf(row);
-          const productDescriptions =
-            pEls.length > rowIndex && pEls[rowIndex]
-              ? pEls[rowIndex].innerText.trim()
-              : "N/A";
+        const items = rows.map((row, index) => {
+          console.log(`[Scraper] Processing row ${index + 1}`);
 
-          // NEW: Extract quantity
-          const quantityEl = itemRow.querySelector(
-            ".flex-none.w-32.py-1.whitespace-nowrap.text-sm.text-gray-500.text-center.hidden.md\\:block"
+          // Get the first child div which contains product name
+          const firstChild = row.querySelector('.flex.max-md\\:pb-0.pr-1.justify-between');
+          const productName = firstChild?.firstElementChild?.innerText?.trim() || "N/A";
+          console.log(`  - Product Name: "${productName}"`);
+
+          // Find divs with text-right class for prices
+          const textRightDivs = Array.from(row.querySelectorAll('div')).filter(d =>
+            d.className.includes('text-right') && d.innerText?.includes('$')
           );
-          const quantity = quantityEl?.innerText.trim() || "N/A";
 
-          const price =
-            itemRow
-              ?.querySelector(
-                ".flex-none.w-32.pl-6.py-1.whitespace-nowrap.text-sm.text-gray-500.text-right.hidden.md\\:block"
-              )
-              ?.innerText.trim() || "N/A";
+          let price = "N/A";
+          let total = "N/A";
 
-          const tax =
-            itemRow
-              ?.querySelector(
-                ".flex-none.w-32.pr-16.py-1.whitespace-nowrap.text-sm.text-gray-500.text-left.hidden.md\\:flex"
-              )
-              ?.innerText.trim() || "N/A";
+          if (textRightDivs.length > 0) {
+            price = textRightDivs[0]?.innerText?.trim() || "N/A";
+            total = textRightDivs[textRightDivs.length - 1]?.innerText?.trim() || price;
+          }
+          console.log(`  - Price: "${price}", Total: "${total}"`);
 
-          const total =
-            itemRow
-              ?.querySelector(
-                ".flex-none.w-32.py-1.whitespace-nowrap.text-sm.text-gray-500.text-right"
-              )
-              ?.innerText.trim() || "N/A";
+          // Get quantity - look for text-center div
+          const qtyDiv = row.querySelector('div.text-center');
+          const quantity = qtyDiv?.innerText?.trim() || "1";
+          console.log(`  - Quantity: "${quantity}"`);
+
+          // Get description from sibling element
+          let productDescriptions = "N/A";
+          const nextSibling = row.nextElementSibling;
+          if (nextSibling && !nextSibling.classList.contains('hover:bg-gray-50')) {
+            productDescriptions = nextSibling.innerText?.trim() || "N/A";
+          }
 
           return {
             productName,
             productDescriptions,
             quantity,
             price,
-            tax,
             total,
           };
         });
+
+        console.log(`[Scraper] Extraction complete. Found ${items.length} items`);
+        return items;
       });
     } catch (lineErr) {
       console.warn(
@@ -372,8 +343,8 @@ const scrapeEstimate = async (estimateUrl) => {
       console.warn(`No line items found for ${estimateUrl}`);
     console.log(`Scraped ${lineItems.length} line items successfully.`);
 
-    // Strip out tax for Discord brevity
-    const lineItemsNoDesc = lineItems.map((item) => ({
+    // Format for Discord
+    const lineItemsFormatted = lineItems.map((item) => ({
       productName: item.productName,
       productDescriptions:
         `${item.productName}\n${item.productDescriptions}`.trim(),
@@ -387,7 +358,7 @@ const scrapeEstimate = async (estimateUrl) => {
       statusCode: 200,
       message: `Estimate: ${estimateUrl}\nMeta Data: ${JSON.stringify(
         metaData
-      )}\nLine Items: ${JSON.stringify(lineItemsNoDesc)}`,
+      )}\nLine Items: ${JSON.stringify(lineItemsFormatted)}`,
       channelId: DISCORD_CHANNEL_ID,
     });
 
