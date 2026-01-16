@@ -5,7 +5,7 @@ const { sendDiscordMessage } = require("../discordBotService");
 const WHMCS_API_URL = process.env.WHMCS_API_URL;
 const WHMCS_API_IDENTIFIER = process.env.WHMCS_API_IDENTIFIER;
 const WHMCS_API_SECRET = process.env.WHMCS_API_SECRET;
-const WHMCS_ADMIN_URL = "https://billing.murphyconsulting.us/admin";
+const WHMCS_QUOTES_URL = "https://my.murphyconsulting.us/cadzone/quotes.php";
 const DISCORD_CHANNEL_ID = "1345967280605102120";
 const MENTION_USER = "<@336794456063737857>";
 
@@ -18,13 +18,25 @@ const buildRequestParams = (action, additionalParams) => ({
 });
 
 const encodeLineItems = (lineItems) => {
-  const formattedItems = lineItems.map((item) => ({
-    desc: item.productDescriptions,
-    qty: item.quantity,
-    up: item.price.replace(/[^0-9.]/g, "") || "0.00",
-    discount: "0.00",
-    taxable: true,
-  }));
+  const formattedItems = lineItems.map((item) => {
+    // Combine product name and description for the line item description
+    const productName = item.productName || "";
+    const productDesc = item.productDescriptions || item.productDescription || "";
+    const fullDesc = productDesc && productDesc !== "N/A"
+      ? `${productName}\n${productDesc}`.trim()
+      : productName;
+
+    // Clean price - remove $ and any non-numeric characters except decimal
+    const cleanPrice = (item.price || "0").replace(/[^0-9.]/g, "") || "0.00";
+
+    return {
+      desc: fullDesc,
+      qty: item.quantity || "1",
+      up: cleanPrice,
+      discount: "0.00",
+      taxable: true,
+    };
+  });
   const serialized = phpSerialize.serialize(formattedItems);
   return Buffer.from(serialized).toString("base64");
 };
@@ -71,7 +83,8 @@ const createQuote = async (quoteParams) => {
     });
 
     const quoteId = response.data.quoteid;
-    const whmcsQuoteLink = `${WHMCS_ADMIN_URL}/quotes.php?action=manage&id=${quoteId}`;
+    const subjectEncoded = encodeURIComponent(quoteParams.subject || "");
+    const whmcsQuoteLink = `${WHMCS_QUOTES_URL}?filter=true&subject=${subjectEncoded}`;
 
     await sendDiscordMessage({
       title: "Quote Created Successfully",

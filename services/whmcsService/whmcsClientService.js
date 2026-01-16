@@ -63,4 +63,61 @@ const getClientDetails = async (clientEmail) => {
   }
 };
 
-module.exports = { getClientDetails, buildRequestParams };
+const addClient = async (clientData) => {
+  try {
+    const params = buildRequestParams("AddClient", {
+      firstname: clientData.first_name || "Unknown",
+      lastname: clientData.last_name || "Client",
+      email: clientData.email,
+      phonenumber: clientData.phone || "",
+      companyname: clientData.company_name || "",
+      address1: clientData.address1 || "",
+      address2: clientData.address2 || "",
+      city: clientData.city || "",
+      state: clientData.state || "",
+      postcode: clientData.postcode || "",
+      country: clientData.country || "US",
+      password2: Math.random().toString(36).slice(-12), // Generate random password
+      skipvalidation: true,
+    });
+    const formParams = new URLSearchParams(params);
+    const response = await axios.post(WHMCS_API_URL, formParams.toString(), {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    });
+
+    console.log("Add Client Response:", response.data);
+
+    if (response.data.result === "success") {
+      await sendDiscordMessage({
+        title: "New Client Created",
+        statusCode: 200,
+        message: `New client created: ${clientData.first_name} ${clientData.last_name} (${clientData.email})\nClient ID: ${response.data.clientid}`,
+        channelId: DISCORD_CHANNEL_ID,
+      });
+    }
+
+    return response.data;
+  } catch (error) {
+    const statusCode = error.response ? error.response.status : 500;
+
+    let errorDetail = error.message;
+    if (error.response && error.response.data) {
+      errorDetail += `\nAdditional Info: ${JSON.stringify(
+        error.response.data,
+        null,
+        2
+      )}`;
+    }
+
+    await sendDiscordMessage({
+      title: "Add Client Error",
+      statusCode,
+      message: `${MENTION_USER} Error creating client ${clientData.email}: ${errorDetail}`,
+      channelId: DISCORD_CHANNEL_ID,
+    });
+
+    throw error;
+  }
+};
+
+module.exports = { getClientDetails, addClient, buildRequestParams };

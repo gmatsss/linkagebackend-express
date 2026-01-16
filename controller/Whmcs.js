@@ -3,6 +3,7 @@ const { sendDiscordMessage } = require("../services/discordBotService");
 
 const {
   getClientDetails,
+  addClient,
 } = require("../services/whmcsService/whmcsClientService");
 const {
   encodeLineItems,
@@ -156,8 +157,10 @@ exports.receiveEstimateGhl = async (req, res) => {
   try {
     let clientDetails = {};
     let clientId = null;
+    const clientEmail = req.body.email;
+
+    // First, try to get existing client
     try {
-      const clientEmail = req.body.email;
       const details = await getClientDetails(clientEmail);
       clientDetails = details;
       if (
@@ -167,14 +170,20 @@ exports.receiveEstimateGhl = async (req, res) => {
         details.client.id
       ) {
         clientId = details.client.id;
+        console.log(`Existing client found: ${clientId}`);
       }
     } catch (err) {
       console.warn(
-        "Failed to fetch client details, fallback will be used.",
+        "Client not found in WHMCS, will create new client.",
         err.message
       );
-      clientDetails = {
-        email: req.body.email || "",
+    }
+
+    // If client doesn't exist, create a new one
+    if (!clientId && clientEmail) {
+      console.log("Creating new client in WHMCS...");
+      const newClientData = {
+        email: clientEmail,
         phone: req.body.phone || "",
         first_name: req.body.first_name || "",
         last_name: req.body.last_name || "",
@@ -184,8 +193,21 @@ exports.receiveEstimateGhl = async (req, res) => {
         city: req.body.city || "",
         state: req.body.state || "",
         postcode: req.body.postcode || "",
-        country: req.body.country || "",
+        country: req.body.country || "US",
       };
+
+      try {
+        const newClientResponse = await addClient(newClientData);
+        if (newClientResponse.result === "success" && newClientResponse.clientid) {
+          clientId = newClientResponse.clientid;
+          clientDetails = newClientData;
+          console.log(`New client created with ID: ${clientId}`);
+        }
+      } catch (addErr) {
+        console.error("Failed to create new client:", addErr.message);
+        // Continue without client ID - quote will be created with email only
+        clientDetails = newClientData;
+      }
     }
 
     const estimateUrl = req.body.customData?.estiUlr;
@@ -206,8 +228,11 @@ exports.receiveEstimateGhl = async (req, res) => {
         ? formatDateToYYYYMMDD(metaData.issueDate)
         : "";
 
+    // Get estimate name from either estimateName or estiname field
+    const estimateName = req.body.customData?.estimateName || req.body.customData?.estiname || "Estimate Quote on Venderflow";
+
     const quoteParams = {
-      subject: req.body.customData?.estimateName || "Estimate Quote on Venderflow",
+      subject: estimateName,
       stage: "Delivered",
       validuntil: finalExpiryDate,
       datecreated: finalIssueDate,
