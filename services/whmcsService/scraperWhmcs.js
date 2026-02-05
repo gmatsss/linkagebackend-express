@@ -80,27 +80,27 @@ const scrapeEstimateLocal = async (estimateUrl) => {
       timeout: 180000,
     });
 
-    // Wait for the meta information container.
-    await page.waitForSelector("div.grid.grid-cols-1.md\\:grid-cols-3.py-2", {
-      timeout: 30000,
-    });
+    // Try to wait for metadata selector, but don't fail if not found
+    let metaData = { issueDate: null, expiryDate: null };
+    try {
+      await page.waitForSelector("div.grid.grid-cols-1.md\\:grid-cols-3.py-2", {
+        timeout: 15000,
+      });
 
-    // Extract meta information (Issue Date and Expiry Date)
-    const metaData = await page.evaluate(() => {
-      let issueDate = null,
-        expiryDate = null;
-      const gridContainer = document.querySelector(
-        "div.grid.grid-cols-1.md\\:grid-cols-3.py-2"
-      );
-      if (gridContainer) {
-        const containers = Array.from(
-          gridContainer.querySelectorAll("div.flex.justify-between.md\\:block")
-        );
-        containers.forEach((container) => {
-          const labelDiv = container.querySelector("div.text-sm.font-medium");
-          const valueDiv = container.querySelector("div.text-sm.text-gray-600");
-          if (labelDiv && valueDiv) {
-            const label = labelDiv.innerText.trim();
+      // Extract meta information (Issue Date and Expiry Date)
+      metaData = await page.evaluate(() => {
+        let issueDate = null,
+          expiryDate = null;
+
+        // Search all text-sm font-medium elements for Issue Date and Expiry Date labels
+        const allLabels = document.querySelectorAll("div.text-sm.font-medium");
+        allLabels.forEach((labelDiv) => {
+          const label = labelDiv.innerText.trim();
+          // Find the next sibling or nearby element with the value
+          const parent = labelDiv.parentElement;
+          const valueDiv = parent?.querySelector("div.text-sm.text-gray-600");
+
+          if (valueDiv) {
             const value = valueDiv.innerText.trim();
             if (label.includes("Issue Date")) {
               issueDate = value;
@@ -110,9 +110,12 @@ const scrapeEstimateLocal = async (estimateUrl) => {
             }
           }
         });
-      }
-      return { issueDate, expiryDate };
-    });
+
+        return { issueDate, expiryDate };
+      });
+    } catch (metaErr) {
+      console.warn("Metadata selector not found, proceeding without dates:", metaErr.message);
+    }
 
     // Wait for line items to load
     let lineItems = [];
@@ -246,33 +249,37 @@ const scrapeEstimate = async (estimateUrl) => {
       timeout: 180000,
     });
 
-    await page.waitForSelector("div.grid.grid-cols-1.md\\:grid-cols-3.py-2", {
-      timeout: 30000,
-    });
+    // Try to wait for metadata selector, but don't fail if not found
+    let metaData = { issueDate: null, expiryDate: null };
+    try {
+      await page.waitForSelector("div.grid.grid-cols-1.md\\:grid-cols-3.py-2", {
+        timeout: 15000,
+      });
 
-    const metaData = await page.evaluate(() => {
-      let issueDate = null,
-        expiryDate = null;
-      const gridContainer = document.querySelector(
-        "div.grid.grid-cols-1.md\\:grid-cols-3.py-2"
-      );
-      if (gridContainer) {
-        const containers = Array.from(
-          gridContainer.querySelectorAll("div.flex.justify-between.md\\:block")
-        );
-        containers.forEach((container) => {
-          const labelDiv = container.querySelector("div.text-sm.font-medium");
-          const valueDiv = container.querySelector("div.text-sm.text-gray-600");
-          if (labelDiv && valueDiv) {
-            const label = labelDiv.innerText.trim();
+      metaData = await page.evaluate(() => {
+        let issueDate = null,
+          expiryDate = null;
+
+        // Search all text-sm font-medium elements for Issue Date and Expiry Date labels
+        const allLabels = document.querySelectorAll("div.text-sm.font-medium");
+        allLabels.forEach((labelDiv) => {
+          const label = labelDiv.innerText.trim();
+          // Find the next sibling or nearby element with the value
+          const parent = labelDiv.parentElement;
+          const valueDiv = parent?.querySelector("div.text-sm.text-gray-600");
+
+          if (valueDiv) {
             const value = valueDiv.innerText.trim();
             if (label.includes("Issue Date")) issueDate = value;
             if (label.includes("Expiry Date")) expiryDate = value;
           }
         });
-      }
-      return { issueDate, expiryDate };
-    });
+
+        return { issueDate, expiryDate };
+      });
+    } catch (metaErr) {
+      console.warn("Metadata selector not found, proceeding without dates:", metaErr.message);
+    }
 
     let lineItems = [];
     try {
